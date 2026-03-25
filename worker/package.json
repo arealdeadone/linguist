@@ -9,7 +9,7 @@
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@linguist/ai-core": "workspace:*",
+		"@linguist/ai-core": "*",
 		"dotenv": "^16.4.7",
 		"drizzle-orm": "^0.45.1",
 		"ioredis": "^5.10.1",
