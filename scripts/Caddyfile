@@ -1,0 +1,19 @@
+{
+	local_certs
+}
+
+https://192.168.1.35:3443 {
+	tls internal
+
+	handle /caddy-root-ca.crt {
+		root * /tmp
+		rewrite * /caddy-ca.crt
+		file_server
+	}
+
+	handle {
+		reverse_proxy localhost:30000 {
+			flush_interval -1
+		}
+	}
+}

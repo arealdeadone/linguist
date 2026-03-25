@@ -1,0 +1,25 @@
+{
+	"name": "@linguist/worker",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/index.ts",
+		"start": "tsx src/index.ts",
+		"check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@linguist/ai-core": "workspace:*",
+		"dotenv": "^16.4.7",
+		"drizzle-orm": "^0.45.1",
+		"ioredis": "^5.10.1",
+		"magic-bytes.js": "^1.13.0",
+		"openai": "^6.32.0",
+		"postgres": "^3.4.8"
+	},
+	"devDependencies": {
+		"@types/node": "^22",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3"
+	}
+}

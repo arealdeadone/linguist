@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+@theme {
+	/* Primary — deep indigo, calm and focused */
+	--color-primary-50: oklch(0.97 0.01 275);
+	--color-primary-100: oklch(0.93 0.03 275);
+	--color-primary-200: oklch(0.87 0.06 275);
+	--color-primary-300: oklch(0.76 0.1 275);
+	--color-primary-400: oklch(0.64 0.15 275);
+	--color-primary-500: oklch(0.53 0.18 275);
+	--color-primary-600: oklch(0.45 0.19 275);
+	--color-primary-700: oklch(0.39 0.17 275);
+	--color-primary-800: oklch(0.33 0.14 275);
+	--color-primary-900: oklch(0.27 0.11 275);
+	--color-primary-950: oklch(0.2 0.08 275);
+
+	/* Warm accent — amber/saffron for highlights */
+	--color-accent-50: oklch(0.98 0.02 85);
+	--color-accent-100: oklch(0.95 0.05 85);
+	--color-accent-200: oklch(0.9 0.1 85);
+	--color-accent-300: oklch(0.84 0.14 80);
+	--color-accent-400: oklch(0.78 0.16 75);
+	--color-accent-500: oklch(0.72 0.17 65);
+	--color-accent-600: oklch(0.62 0.16 55);
+	--color-accent-700: oklch(0.52 0.14 50);
+
+	/* Surface — warm neutrals */
+	--color-surface-50: oklch(0.985 0.002 80);
+	--color-surface-100: oklch(0.97 0.004 80);
+	--color-surface-200: oklch(0.94 0.006 80);
+	--color-surface-300: oklch(0.9 0.008 80);
+	--color-surface-400: oklch(0.7 0.01 80);
+	--color-surface-500: oklch(0.55 0.01 80);
+	--color-surface-600: oklch(0.42 0.01 80);
+	--color-surface-700: oklch(0.35 0.01 80);
+	--color-surface-800: oklch(0.25 0.01 80);
+	--color-surface-900: oklch(0.18 0.01 80);
+
+	/* Semantic */
+	--color-success: oklch(0.6 0.15 155);
+	--color-warning: oklch(0.75 0.15 65);
+	--color-error: oklch(0.6 0.2 25);
+	--color-info: oklch(0.6 0.12 240);
+
+	/* Typography — DM Sans for body, DM Serif Display for headings */
+	--font-sans: 'DM Sans', system-ui, sans-serif;
+	--font-display: 'DM Serif Display', Georgia, serif;
+
+	/* Transitions */
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+::view-transition-old(root) {
+	animation: vt-fade-out 150ms ease-in;
+}
+::view-transition-new(root) {
+	animation: vt-fade-in 200ms ease-out;
+}
+@keyframes vt-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes vt-fade-in { from { opacity: 0; } to { opacity: 1; } }

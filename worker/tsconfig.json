@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"baseUrl": ".",
+		"paths": {
+			"@linguist/ai-core": ["../packages/ai-core/src/index.ts"]
+		},
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"outDir": "./dist",
+		"declaration": true,
+		"sourceMap": true,
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": ["src"]
+}

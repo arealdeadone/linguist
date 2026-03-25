@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""
+Test Agoda GenAI Gateway audio endpoints:
+1. TTS - Generate Telugu speech via gpt-4o-mini-tts
+2. STT - Transcribe the generated audio back via gpt-4o-transcribe & whisper-1
+3. Verify round-trip accuracy
+"""
+
+import os
+import sys
+import time
+from pathlib import Path
+
+GENAI_BASE_URL = "https://genai-gateway.agoda.is/v1"
+API_KEY = os.environ.get("AGODA_GENAI_API_KEY")
+
+if not API_KEY:
+    print("ERROR: AGODA_GENAI_API_KEY environment variable not set")
+    sys.exit(1)
+
+try:
+    from openai import OpenAI
+except ImportError:
+    print("Installing openai package...")
+    os.system(f"{sys.executable} -m pip install openai")
+    from openai import OpenAI
+
+client = OpenAI(api_key=API_KEY, base_url=GENAI_BASE_URL)
+
+OUTPUT_DIR = Path("test_audio_output")
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+TELUGU_PHRASES = [
+    ("నమస్కారం, మీరు ఎలా ఉన్నారు?", "Namaskaram, how are you?"),
+    ("నాకు తెలుగు నేర్చుకోవాలి", "I want to learn Telugu"),
+    ("ఈ రోజు వాతావరణం చాలా బాగుంది", "The weather is very nice today"),
+]
+
+CHINESE_PHRASES = [
+    ("你好，你叫什么名字？", "Hello, what is your name?"),
+    ("我想学中文", "I want to learn Chinese"),
+    ("今天天气很好", "The weather is very nice today"),
+]
+
+
+def test_tts(text: str, lang_label: str, index: int) -> Path | None:
+    filename = OUTPUT_DIR / f"{lang_label}_{index}.mp3"
+    print(f"\n--- TTS Test: {lang_label} phrase {index + 1} ---")
+    print(f"  Input text: {text}")
+
+    try:
+        start = time.time()
+        response = client.audio.speech.create(
+            model="gpt-4o-mini-tts",
+            voice="coral",
+            input=text,
+            instructions=f"Speak naturally in {'Telugu' if lang_label == 'telugu' else 'Mandarin Chinese'}. Use clear pronunciation suitable for language learners.",
+        )
+        elapsed = time.time() - start
+
+        response.stream_to_file(str(filename))
+        size_kb = filename.stat().st_size / 1024
+        print(f"  ✅ TTS SUCCESS | {elapsed:.2f}s | {size_kb:.1f} KB | saved to {filename}")
+        return filename
+
+    except Exception as e:
+        print(f"  ❌ TTS FAILED: {e}")
+        return None
+
+
+def test_stt(audio_path: Path, model: str, expected_text: str, lang: str) -> str | None:
+    print(f"\n--- STT Test: {model} ---")
+    print(f"  Audio: {audio_path.name}")
+    print(f"  Expected: {expected_text}")
+
+    try:
+        start = time.time()
+        with open(audio_path, "rb") as f:
+            transcript = client.audio.transcriptions.create(
+                model=model,
+                file=f,
+                language=lang,
+            )
+        elapsed = time.time() - start
+
+        result = transcript.text
+        print(f"  ✅ STT SUCCESS | {elapsed:.2f}s")
+        print(f"  Transcript: {result}")
+        return result
+
+    except Exception as e:
+        print(f"  ❌ STT FAILED: {e}")
+        return None
+
+
+def main():
+    print("=" * 60)
+    print("Agoda GenAI Gateway — Audio Endpoint Tests")
+    print(f"Base URL: {GENAI_BASE_URL}")
+    print(f"API Key:  {API_KEY[:12]}...{API_KEY[-4:]}")
+    print("=" * 60)
+
+    stt_models = ["gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1"]
+    results = {"tts": [], "stt": []}
+
+    print("\n\n" + "=" * 60)
+    print("TELUGU TESTS")
+    print("=" * 60)
+
+    for i, (telugu_text, english_desc) in enumerate(TELUGU_PHRASES):
+        audio_path = test_tts(telugu_text, "telugu", i)
+        if not audio_path:
+            results["tts"].append(("telugu", i, False))
+            continue
+        results["tts"].append(("telugu", i, True))
+
+        for model in stt_models:
+            transcript = test_stt(audio_path, model, telugu_text, "te")
+            results["stt"].append(("telugu", model, i, transcript is not None, transcript))
+
+    print("\n\n" + "=" * 60)
+    print("CHINESE MANDARIN TESTS")
+    print("=" * 60)
+
+    for i, (chinese_text, english_desc) in enumerate(CHINESE_PHRASES):
+        audio_path = test_tts(chinese_text, "chinese", i)
+        if not audio_path:
+            results["tts"].append(("chinese", i, False))
+            continue
+        results["tts"].append(("chinese", i, True))
+
+        for model in stt_models:
+            transcript = test_stt(audio_path, model, chinese_text, "zh")
+            results["stt"].append(("chinese", model, i, transcript is not None, transcript))
+
+    print("\n\n" + "=" * 60)
+    print("SUMMARY")
+    print("=" * 60)
+
+    print("\nTTS Results:")
+    for lang, idx, success in results["tts"]:
+        status = "✅" if success else "❌"
+        print(f"  {status} {lang} phrase {idx + 1}")
+
+    print("\nSTT Results:")
+    for lang, model, idx, success, transcript in results["stt"]:
+        status = "✅" if success else "❌"
+        print(f"  {status} {lang} phrase {idx + 1} | {model:25s} | {transcript or 'FAILED'}")
+
+    print(f"\nAudio files saved in: {OUTPUT_DIR.absolute()}")
+
+
+if __name__ == "__main__":
+    main()

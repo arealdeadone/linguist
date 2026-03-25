@@ -1,0 +1,32 @@
+services:
+  postgres:
+    platform: linux/arm64
+    image: postgres:17-alpine
+    container_name: linguist-postgres
+    environment:
+      POSTGRES_DB: linguist
+      POSTGRES_USER: linguist
+      POSTGRES_PASSWORD: linguist
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linguist"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    platform: linux/arm64
+    image: redis:7-alpine
+    container_name: linguist-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:

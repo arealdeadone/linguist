@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linguist-worker
+  namespace: linguist
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: linguist-worker
+  template:
+    metadata:
+      labels:
+        app: linguist-worker
+    spec:
+      containers:
+        - name: worker
+          image: linguist-worker:latest
+          imagePullPolicy: Never
+          envFrom:
+            - configMapRef:
+                name: linguist-config
+          resources:
+            requests:
+              memory: '256Mi'
+              cpu: '100m'
+            limits:
+              memory: '512Mi'
+              cpu: '500m'
+          livenessProbe:
+            exec:
+              command: ['node', '-e', 'process.exit(0)']
+            initialDelaySeconds: 10
+            periodSeconds: 30

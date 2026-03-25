@@ -1,0 +1,12 @@
+node_modules
+.svelte-kit
+build
+.env
+venv
+test_audio_output*
+docs
+k8s
+.git
+*.md
+__pycache__
+*.pyc
