@@ -156,37 +156,35 @@ for (const lang of langConfigs) {
 		it(`GIVEN ${lang.target} vocab card WHEN reviewed as listening THEN listening modality updates`, async () => {
 			const pair = pairs[lang.key];
 			if (!pair) return;
-			const cards = await api(`/api/srs?learnerId=${pair.learner.id}&limit=100`);
+			const cards = await api(`/api/srs?learnerId=${pair.learner.id}&all=true`);
 			const allCards = cards.data as Array<{ id: string }>;
 			if (allCards.length === 0) return;
 
 			await post('/api/srs', { vocabId: allCards[0].id, quality: 4, modality: 'listening' });
 
-			const after = await api(`/api/srs?learnerId=${pair.learner.id}&limit=100`);
+			const after = await api(`/api/srs?learnerId=${pair.learner.id}&all=true`);
 			const updated = (
 				after.data as Array<{ id: string; modalityScores: Record<string, number> }>
 			).find((c) => c.id === allCards[0].id);
-			if (updated) {
-				expect(updated.modalityScores.listening).toBeGreaterThan(0);
-			}
+			expect(updated).toBeDefined();
+			expect(updated!.modalityScores.listening).toBeGreaterThan(0);
 		});
 
 		it(`GIVEN ${lang.target} vocab card WHEN reviewed as speaking THEN speaking modality updates`, async () => {
 			const pair = pairs[lang.key];
 			if (!pair) return;
-			const cards = await api(`/api/srs?learnerId=${pair.learner.id}&limit=100`);
+			const cards = await api(`/api/srs?learnerId=${pair.learner.id}&all=true`);
 			const allCards = cards.data as Array<{ id: string }>;
 			if (allCards.length < 2) return;
 
 			await post('/api/srs', { vocabId: allCards[1].id, quality: 4, modality: 'speaking' });
 
-			const after = await api(`/api/srs?learnerId=${pair.learner.id}&limit=100`);
+			const after = await api(`/api/srs?learnerId=${pair.learner.id}&all=true`);
 			const updated = (
 				after.data as Array<{ id: string; modalityScores: Record<string, number> }>
 			).find((c) => c.id === allCards[1].id);
-			if (updated) {
-				expect(updated.modalityScores.speaking).toBeGreaterThan(0);
-			}
+			expect(updated).toBeDefined();
+			expect(updated!.modalityScores.speaking).toBeGreaterThan(0);
 		});
 	});
 
@@ -358,19 +356,19 @@ describe('FEATURE: Learner Profiles (01-project-vision)', () => {
 	});
 
 	it('WHEN authenticating with Chinese learner PIN THEN returns zh learner', async () => {
-		const { status, data } = await post('/api/profile', { pin: '1234' });
+		const { status, data } = await post('/api/profile', { name: 'Arvind', pin: '1234' });
 		expect(status).toBe(200);
 		expect((data as Learner).targetLanguage).toBe('zh');
 	});
 
 	it('WHEN authenticating with Telugu learner PIN THEN returns te learner', async () => {
-		const { status, data } = await post('/api/profile', { pin: '5678' });
+		const { status, data } = await post('/api/profile', { name: 'อุ้ม', pin: '5678' });
 		expect(status).toBe(200);
 		expect((data as Learner).targetLanguage).toBe('te');
 	});
 
 	it('WHEN authenticating with invalid PIN THEN returns 401', async () => {
-		const { status } = await post('/api/profile', { pin: '0000' });
+		const { status } = await post('/api/profile', { name: 'Arvind', pin: '0000' });
 		expect(status).toBe(401);
 	});
 });

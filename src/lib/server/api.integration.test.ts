@@ -40,10 +40,10 @@ describe('API Integration Tests', () => {
 			expect(status).toBe(404);
 		});
 
-		it('POST /api/profile with invalid pin returns 401', async () => {
-			const { status } = await post('/api/profile', { pin: '9999' });
-			expect(status).toBe(401);
-		});
+	it('POST /api/profile with invalid pin returns 401', async () => {
+		const { status } = await post('/api/profile', { name: 'Arvind', pin: '9999' });
+		expect(status).toBe(401);
+	});
 
 		it('POST /api/profile requires name for creation', async () => {
 			const { status } = await post('/api/profile', { targetLanguage: 'zh' });
@@ -120,7 +120,7 @@ describe('API Integration Tests', () => {
 		});
 
 		it('POST /api/srs updates vocabulary SM-2 state', async () => {
-			const cards = await api(`/api/srs?learnerId=${learnerId}`);
+			const cards = await api(`/api/srs?learnerId=${learnerId}&all=true`);
 			if (cards.data.length === 0) return;
 
 			const vocabId = cards.data[0].id;

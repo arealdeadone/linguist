@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	getDueVocab,
+	getVocabByLearnerId,
 	updateSM2,
 	getVocabById,
 	updateModalityScore
@@ -12,6 +13,11 @@ import type { SM2Card, ReviewQuality } from '$lib/server/srs';
 export const GET: RequestHandler = async ({ url }) => {
 	const learnerId = url.searchParams.get('learnerId');
 	if (!learnerId) return json({ error: 'learnerId required' }, { status: 400 });
+
+	if (url.searchParams.get('all') === 'true') {
+		const allVocab = await getVocabByLearnerId(learnerId);
+		return json(allVocab);
+	}
 
 	const limit = parseInt(url.searchParams.get('limit') ?? '20');
 	const dueCards = await getDueVocab(learnerId, limit);
