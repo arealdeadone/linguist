@@ -8,24 +8,17 @@ import { aiUsageLogs } from '$lib/server/schema';
 
 export const GET: RequestHandler = async () => {
 	try {
-		const [learners, costRows, countRows] = await Promise.all([
-			getAllLearners(),
-			db
-				.select({
-					totalCost: sql<number>`coalesce(sum(${aiUsageLogs.costUsd}), 0)`,
-					costToday: sql<number>`coalesce(sum(CASE WHEN ${aiUsageLogs.createdAt} >= CURRENT_DATE THEN ${aiUsageLogs.costUsd} ELSE 0 END), 0)`
-				})
-				.from(aiUsageLogs),
-			db.execute(sql`
-				SELECT
-					(SELECT count(*)::int FROM lessons) AS total_lessons,
-					(SELECT count(*)::int FROM conversations) AS total_conversations,
-					(SELECT count(*)::int FROM quiz_results) AS total_reviews
-			`)
-		]);
+		const learners = await getAllLearners();
 
-		const costs = costRows[0] ?? { totalCost: 0, costToday: 0 };
-		const counts = (countRows[0] ?? {}) as Record<string, number>;
+		const costRows = await db
+			.select({
+				totalCost: sql<number>`coalesce(sum(${aiUsageLogs.costUsd}), 0)`,
+				costToday: sql<number>`coalesce(sum(CASE WHEN ${aiUsageLogs.createdAt} >= CURRENT_DATE THEN ${aiUsageLogs.costUsd} ELSE 0 END), 0)`,
+				totalCalls: sql<number>`count(*)::int`
+			})
+			.from(aiUsageLogs);
+
+		const costs = costRows[0] ?? { totalCost: 0, costToday: 0, totalCalls: 0 };
 
 		const languagePairMap = new Map<
 			string,
@@ -50,9 +43,9 @@ export const GET: RequestHandler = async () => {
 			languagePairs: [...languagePairMap.values()].sort((a, b) => b.count - a.count),
 			totalCostUsd: costs.totalCost,
 			costToday: costs.costToday,
-			totalLessons: counts.total_lessons ?? 0,
-			totalConversations: counts.total_conversations ?? 0,
-			totalReviews: counts.total_reviews ?? 0
+			totalLessons: 0,
+			totalConversations: 0,
+			totalReviews: 0
 		};
 
 		return json(payload);
