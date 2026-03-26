@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-SvelteKit 5 PWA teaching Chinese Mandarin (in Hindi) and Telugu (in Thai) via AI-powered lessons, conversation practice, and spaced repetition. All AI through Agoda GenAI Gateway. Self-hosted on OrbStack K8s with plain HTTP LAN access.
+SvelteKit 5 PWA teaching Chinese Mandarin (in Hindi) and Telugu (in Thai) via AI-powered lessons, conversation practice, and spaced repetition. All AI through AI Gateway. Self-hosted on OrbStack K8s with plain HTTP LAN access.
 
 ## STRUCTURE
 
@@ -153,7 +153,7 @@ kubectl port-forward -n linguist svc/linguist-app --address 0.0.0.0 30000:3000 &
 - **Affective filter** — No red X, no harsh scoring, gentle amber 💡 feedback
 - **CEFR-adaptive quizzes** — A1: audio-first, A2: read+listen, B1+: active recall
 
-## AI MODELS (Agoda GenAI Gateway)
+## AI MODELS (AI Gateway)
 
 | Task                   | Model                            | Notes                                        |
 | ---------------------- | -------------------------------- | -------------------------------------------- |

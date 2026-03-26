@@ -1,4 +1,4 @@
-export const GENAI_BASE_URL = 'https://genai-gateway.agoda.is/v1';
+export const GENAI_BASE_URL = 'https://api.openai.com/v1';
 
 export type TaskType =
 	| 'lesson_generation'

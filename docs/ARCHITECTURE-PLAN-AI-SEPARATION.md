@@ -7,7 +7,7 @@ Separate AI processing from the main app so the main app can be hosted for free 
 ## Constraints
 
 - **Zero hosting cost** — Supabase free tier for DB + auth, Vercel/Cloudflare free tier for app
-- **AI stays local** — Agoda GenAI Gateway is only accessible from the local network
+- **AI stays local** — AI Gateway is only accessible from the local network
 - **Acceptable latency** — async processing with delays is OK
 - **No functionality loss** — every feature must work as before, just with async AI calls
 
@@ -18,7 +18,7 @@ Separate AI processing from the main app so the main app can be hosted for free 
 │  Main App (Vercel/Cloudflare)    │     │  Local AI Worker         │
 │  SvelteKit + Supabase DB         │     │  (OrbStack K8s)          │
 │                                  │     │                          │
-│  - All UI pages                  │     │  - Agoda GenAI Gateway   │
+│  - All UI pages                  │     │  - AI Gateway            │
 │  - Auth (Supabase)               │     │  - TTS / STT             │
 │  - SRS algorithm (pure JS)       │     │  - Lesson generation     │
 │  - Lesson player (pre-generated) │     │  - Quiz generation       │
@@ -59,7 +59,7 @@ CREATE INDEX idx_ai_jobs_pending ON ai_jobs(status, created_at) WHERE status = '
 1. **Main app** inserts a row with `status: 'pending'` + input data
 2. **Local worker** polls for pending jobs every 2-5 seconds
 3. Worker picks up job, sets `status: 'processing'` + `started_at`
-4. Worker calls Agoda GenAI Gateway
+4. Worker calls AI Gateway
 5. Worker writes result: `status: 'completed'` + output data (or `status: 'failed'` + error)
 6. **Main app** polls for completed jobs or uses Supabase Realtime to get notified
 

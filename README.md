@@ -9,7 +9,7 @@ SvelteKit 5 PWA for learning Chinese Mandarin (via Hindi) and Telugu (via Thai) 
 │  Main App (Vercel)               │     │  AI Worker (Local K8s)   │
 │  SvelteKit + Supabase DB + Auth  │     │  OrbStack               │
 │                                  │     │                          │
-│  - All UI pages                  │     │  - Agoda GenAI Gateway   │
+│  - All UI pages                  │     │  - AI Gateway            │
 │  - Supabase Auth (all users)     │     │  - TTS / STT             │
 │  - SRS algorithm                 │     │  - Lesson generation     │
 │  - Lesson/quiz playback          │     │  - Conversation AI       │
@@ -21,7 +21,7 @@ SvelteKit 5 PWA for learning Chinese Mandarin (via Hindi) and Telugu (via Thai) 
 ```
 
 - **Main app** runs on Vercel (free tier) with Supabase PostgreSQL + Auth
-- **AI worker** runs on local OrbStack K8s, polls the `ai_jobs` table, calls Agoda GenAI Gateway
+- **AI worker** runs on local OrbStack K8s, polls the `ai_jobs` table, calls AI Gateway
 - In **local mode** (`AI_MODE=local`), the app calls AI directly — no worker needed
 
 ## Tech Stack
@@ -29,7 +29,7 @@ SvelteKit 5 PWA for learning Chinese Mandarin (via Hindi) and Telugu (via Thai) 
 - **Frontend**: SvelteKit 5, Svelte 5 runes, Tailwind CSS
 - **Backend**: Drizzle ORM, PostgreSQL 17, Redis 7
 - **Auth**: Supabase Auth (email/password)
-- **AI**: Agoda GenAI Gateway (GPT-4o, Claude, Gemini)
+- **AI**: AI Gateway (GPT-4o, Claude, Gemini)
 - **Deployment**: Vercel (app) + OrbStack K8s (worker)
 - **Monorepo**: `packages/ai-core/` shared between app and worker
 
@@ -58,7 +58,7 @@ cp .env.vercel .env.local  # Then edit with your values:
 #   PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 #   SUPABASE_SECRET_KEY=your-sb-secret-key
 #   ADMIN_SUPABASE_USER_ID=your-admin-user-id
-#   AGODA_GENAI_API_KEY=your-key
+#   GENAI_API_KEY=your-key
 
 # 3. Start services
 npm run docker:up       # PostgreSQL + Redis
@@ -86,8 +86,8 @@ docker build -f worker/Dockerfile -t linguist-worker:latest .
 kubectl create secret generic linguist-worker-secrets -n linguist \
   --from-literal=DATABASE_URL='your-supabase-pooler-url' \
   --from-literal=REDIS_URL='redis://redis:6379' \
-  --from-literal=AGODA_GENAI_API_KEY='your-key' \
-  --from-literal=GENAI_BASE_URL='https://genai-gateway.agoda.is/v1'
+  --from-literal=GENAI_API_KEY='your-key' \
+  --from-literal=GENAI_BASE_URL='https://api.openai.com/v1'
 
 # Deploy
 kubectl apply -k k8s/

@@ -48,8 +48,8 @@ function getValidatedModelRouting(
 
 function getClient(): OpenAI {
 	return new OpenAI({
-		apiKey: env.AGODA_GENAI_API_KEY,
-		baseURL: env.GENAI_BASE_URL || 'https://genai-gateway.agoda.is/v1'
+		apiKey: env.GENAI_API_KEY,
+		baseURL: env.GENAI_BASE_URL || 'https://api.openai.com/v1'
 	});
 }
 

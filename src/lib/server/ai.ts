@@ -20,7 +20,7 @@ let routingLoadPromise: Promise<void> | null = null;
 function getClient(): OpenAI {
 	if (!_client) {
 		_client = new OpenAI({
-			apiKey: env.AGODA_GENAI_API_KEY,
+			apiKey: env.GENAI_API_KEY,
 			baseURL: env.GENAI_BASE_URL || GENAI_BASE_URL
 		});
 	}

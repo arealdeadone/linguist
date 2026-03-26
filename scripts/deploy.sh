@@ -6,8 +6,8 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
 
-if [ -z "${AGODA_GENAI_API_KEY:-}" ]; then
-  echo "ERROR: AGODA_GENAI_API_KEY environment variable is not set"
+if [ -z "${GENAI_API_KEY:-}" ]; then
+  echo "ERROR: GENAI_API_KEY environment variable is not set"
   exit 1
 fi
 

@@ -1,6 +1,6 @@
 import type { TaskType, CefrLevel } from './types/ai';
 
-export const GENAI_BASE_URL = 'https://genai-gateway.agoda.is/v1';
+export const GENAI_BASE_URL = 'https://api.openai.com/v1';
 
 export const MODEL_ROUTING: Record<TaskType, Record<string, string>> = {
 	lesson_generation: { zh: 'gemini-3-flash-preview', te: 'gemini-3-flash-preview' },
