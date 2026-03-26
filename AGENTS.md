@@ -81,6 +81,10 @@ linguist/
 - Empty string defaults for missing data (`?? ''`) — NEVER for required fields
 - Optional chaining (`?.`) as a lazy null guard — NEVER use to silently swallow what should be an error. Only permitted when the value is GENUINELY optional by design (e.g., optional function params, browser APIs, OpenAI SDK arrays). If the value SHOULD exist, access it directly and let the error surface
 - Hand-rolled code for common tasks — NEVER. Use battle-tested libraries (e.g., `magic-bytes.js` for file detection, `prom-client` for metrics)
+- Eager DB connection at module scope — NEVER. The `db` export in `src/lib/server/db.ts` uses a Proxy for lazy init. Never replace it with a direct `const db = drizzle(postgres(...))` at module level — this causes cold-start timeouts on Vercel serverless
+- Modifying `db.ts` without verifying Vercel serverless compatibility — NEVER. Any change to `db.ts` must preserve: (1) lazy connection via Proxy, (2) `prepare: false` for Supabase pooler, (3) `ssl: 'require'` for Supabase, (4) `connect_timeout: 30`, (5) `max: 1` for serverless
+- Modifying `vercel.json` `maxDuration` below 60 — NEVER. Supabase pooler cold-start + SSL handshake needs this headroom
+- Creating new DB/Redis/external service clients at module scope — NEVER on Vercel. All external connections must be lazy-initialized (created on first use, not on import). Module-scope initialization runs during cold start and competes with Vercel's function timeout
 
 ## ZERO TOLERANCE: NO SILENT FAILURES (ABSOLUTE RULE)
 
@@ -114,6 +118,8 @@ grep -rn "catch {}\|catch()\|\.catch(() => {})\|\.catch(() => \[\])" src/ --incl
 8. **Every new AI call must include `onUsage`** for cost tracking
 9. **Every page server load must handle query failures** — log + show error state, NOT empty data
 10. **Every new vocab from lessons must be persisted** — `upsertVocab()` on lesson generation AND completion
+11. **Every modification to `db.ts` must preserve lazy Proxy pattern** — verify `connect_timeout`, `prepare`, `ssl`, `max` settings survive the change
+12. **Every new external service client must be lazy-initialized** — no module-scope `new Client()` or `createClient()` calls that run on import
 
 ## COMMANDS
 
