@@ -83,7 +83,7 @@ linguist/
 - Hand-rolled code for common tasks — NEVER. Use battle-tested libraries (e.g., `magic-bytes.js` for file detection, `prom-client` for metrics)
 - Eager DB connection at module scope — NEVER. The `db` export in `src/lib/server/db.ts` uses a Proxy for lazy init. Never replace it with a direct `const db = drizzle(postgres(...))` at module level — this causes cold-start timeouts on Vercel serverless
 - Modifying `db.ts` without verifying Vercel serverless compatibility — NEVER. Any change to `db.ts` must preserve: (1) lazy connection via Proxy, (2) `prepare: false` for Supabase pooler, (3) `ssl: 'require'` for Supabase, (4) `connect_timeout: 30`, (5) `max: 1` for serverless
-- Modifying `vercel.json` `maxDuration` below 60 — NEVER. Supabase pooler cold-start + SSL handshake needs this headroom
+- Modifying `svelte.config.js` adapter `maxDuration` below 60 — NEVER. Supabase pooler cold-start + SSL handshake needs this headroom
 - Creating new DB/Redis/external service clients at module scope — NEVER on Vercel. All external connections must be lazy-initialized (created on first use, not on import). Module-scope initialization runs during cold start and competes with Vercel's function timeout
 
 ## ZERO TOLERANCE: NO SILENT FAILURES (ABSOLUTE RULE)

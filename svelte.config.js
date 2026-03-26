@@ -8,7 +8,7 @@ const isVercel = !!process.env.VERCEL;
 const config = {
 	preprocess: vitePreprocess(),
 	kit: {
-		adapter: isVercel ? adapterVercel() : adapterNode(),
+		adapter: isVercel ? adapterVercel({ maxDuration: 60 }) : adapterNode(),
 		csrf: {
 			trustedOrigins: ['*']
 		}
