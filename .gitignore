@@ -17,6 +17,10 @@ Thumbs.db
 .env.*
 !.env.vercel
 
+# K8s secrets
+k8s/secrets.yaml
+k8s/worker-secrets.yaml
+
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
