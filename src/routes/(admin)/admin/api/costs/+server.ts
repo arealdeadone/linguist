@@ -11,6 +11,16 @@ const validGroups = new Set<CostGroupBy>(['user', 'task', 'model']);
 
 export const GET: RequestHandler = async ({ url }) => {
 	try {
+		if (url.searchParams.get('all') === 'true') {
+			const [dailyCosts, weeklyCosts, monthlyCosts, taskCosts] = await Promise.all([
+				getCostByPeriod('day', 30),
+				getCostByPeriod('week', 12),
+				getCostByPeriod('month', 6),
+				getCostByTask()
+			]);
+			return json({ dailyCosts, weeklyCosts, monthlyCosts, taskCosts });
+		}
+
 		const periodParam = url.searchParams.get('period') as PeriodType | null;
 		const groupByParam = url.searchParams.get('groupBy') as CostGroupBy | null;
 

@@ -1,22 +1,30 @@
 <script lang="ts">
 	import type { CostEntry, TaskCost } from '$lib/types';
+	import { showToast } from '$lib/stores/toast.svelte';
 
 	let { data } = $props();
 
 	type PeriodKey = 'day' | 'week' | 'month';
 	let activePeriod = $state<PeriodKey>('day');
 
+	let dailyCosts = $state<CostEntry[]>([]);
+	let weeklyCosts = $state<CostEntry[]>([]);
+	let monthlyCosts = $state<CostEntry[]>([]);
+	let taskCosts = $state<TaskCost[]>([]);
+	let chartsLoading = $state(true);
+
 	const periodLabels: Record<PeriodKey, string> = { day: 'Day', week: 'Week', month: 'Month' };
 
 	const costData = $derived(
 		activePeriod === 'day'
-			? data.dailyCosts
+			? dailyCosts
 			: activePeriod === 'week'
-				? data.weeklyCosts
-				: data.monthlyCosts
+				? weeklyCosts
+				: monthlyCosts
 	);
 
-	const maxCost = $derived(Math.max(...costData.map((c: CostEntry) => c.costUsd), 0.001));
+	const maxCost = $derived(Math.max(...costData.map((c) => c.costUsd), 0.001));
+	const maxTaskCost = $derived(Math.max(...taskCosts.map((t) => t.costUsd), 0.001));
 
 	const taskColors: Record<string, string> = {
 		lesson_generation: 'bg-indigo-500',
@@ -29,7 +37,31 @@
 		pronunciation: 'bg-teal-500'
 	};
 
-	const maxTaskCost = $derived(Math.max(...data.taskCosts.map((t: TaskCost) => t.costUsd), 0.001));
+	$effect(() => {
+		loadCharts();
+	});
+
+	async function loadCharts() {
+		try {
+			const res = await fetch('/admin/api/costs?all=true');
+			if (!res.ok) throw new Error('Failed to load cost data');
+			const json = (await res.json()) as {
+				dailyCosts: CostEntry[];
+				weeklyCosts: CostEntry[];
+				monthlyCosts: CostEntry[];
+				taskCosts: TaskCost[];
+			};
+			dailyCosts = json.dailyCosts;
+			weeklyCosts = json.weeklyCosts;
+			monthlyCosts = json.monthlyCosts;
+			taskCosts = json.taskCosts;
+		} catch (e) {
+			showToast('Failed to load cost charts', 'error');
+			console.error('Chart load error:', e);
+		} finally {
+			chartsLoading = false;
+		}
+	}
 
 	function formatUsd(n: number): string {
 		if (n === 0) return '$0.00';
@@ -109,7 +141,11 @@
 			</div>
 		</div>
 
-		{#if costData.length === 0}
+		{#if chartsLoading}
+			<div class="flex items-center justify-center py-8">
+				<span class="text-sm text-gray-500">Loading charts…</span>
+			</div>
+		{:else if costData.length === 0}
 			<p class="py-8 text-center text-sm text-gray-500">No cost data yet</p>
 		{:else}
 			<div class="space-y-2">
@@ -138,11 +174,15 @@
 
 	<div class="rounded-xl border border-gray-800 bg-gray-900 p-6">
 		<h3 class="mb-4 text-sm font-semibold text-white">Cost by Task</h3>
-		{#if data.taskCosts.length === 0}
+		{#if chartsLoading}
+			<div class="flex items-center justify-center py-8">
+				<span class="text-sm text-gray-500">Loading…</span>
+			</div>
+		{:else if taskCosts.length === 0}
 			<p class="py-8 text-center text-sm text-gray-500">No task data yet</p>
 		{:else}
 			<div class="space-y-3">
-				{#each data.taskCosts as task (task.task)}
+				{#each taskCosts as task (task.task)}
 					<div class="flex items-center gap-3">
 						<span class="w-36 shrink-0 text-right text-xs text-gray-400">
 							{task.task.replace(/_/g, ' ')}
