@@ -38,6 +38,88 @@ export async function getCostByPeriod(period: 'day' | 'week' | 'month', limit = 
 		.limit(limit);
 }
 
+export async function getAllCostPeriods() {
+	const rows = await db
+		.select({
+			day: sql<string>`to_char(date_trunc('day', ${aiUsageLogs.createdAt}), 'YYYY-MM-DD')`,
+			task: aiUsageLogs.task,
+			costUsd: sql<number>`coalesce(sum(${aiUsageLogs.costUsd}), 0)`,
+			inputTokens: sql<number>`coalesce(sum(${aiUsageLogs.inputTokens}), 0)::int`,
+			outputTokens: sql<number>`coalesce(sum(${aiUsageLogs.outputTokens}), 0)::int`,
+			callCount: sql<number>`count(*)::int`
+		})
+		.from(aiUsageLogs)
+		.groupBy(sql`date_trunc('day', ${aiUsageLogs.createdAt})`, aiUsageLogs.task)
+		.orderBy(desc(sql`date_trunc('day', ${aiUsageLogs.createdAt})`));
+
+	type PeriodEntry = { period: string; costUsd: number; inputTokens: number; outputTokens: number; callCount: number };
+	type TaskEntry = { task: string; costUsd: number; callCount: number; avgTokens: number };
+
+	const dailyMap = new Map<string, PeriodEntry>();
+	const weeklyMap = new Map<string, PeriodEntry>();
+	const monthlyMap = new Map<string, PeriodEntry>();
+	const taskMap = new Map<string, { costUsd: number; callCount: number; totalTokens: number }>();
+
+	for (const row of rows) {
+		const dayKey = row.day;
+		const d = new Date(dayKey);
+		const weekStart = new Date(d);
+		weekStart.setDate(d.getDate() - d.getDay());
+		const weekKey = weekStart.toISOString().slice(0, 10);
+		const monthKey = dayKey.slice(0, 7) + '-01';
+
+		for (const [map, key] of [[dailyMap, dayKey], [weeklyMap, weekKey], [monthlyMap, monthKey]] as const) {
+			const existing = map.get(key);
+			if (existing) {
+				existing.costUsd += row.costUsd;
+				existing.inputTokens += row.inputTokens;
+				existing.outputTokens += row.outputTokens;
+				existing.callCount += row.callCount;
+			} else {
+				map.set(key, {
+					period: key,
+					costUsd: row.costUsd,
+					inputTokens: row.inputTokens,
+					outputTokens: row.outputTokens,
+					callCount: row.callCount
+				});
+			}
+		}
+
+		const t = taskMap.get(row.task);
+		if (t) {
+			t.costUsd += row.costUsd;
+			t.callCount += row.callCount;
+			t.totalTokens += row.inputTokens + row.outputTokens;
+		} else {
+			taskMap.set(row.task, {
+				costUsd: row.costUsd,
+				callCount: row.callCount,
+				totalTokens: row.inputTokens + row.outputTokens
+			});
+		}
+	}
+
+	const toArray = (m: Map<string, PeriodEntry>, limit: number) =>
+		[...m.values()].slice(0, limit);
+
+	const taskCosts: TaskEntry[] = [...taskMap.entries()]
+		.map(([task, v]) => ({
+			task,
+			costUsd: v.costUsd,
+			callCount: v.callCount,
+			avgTokens: v.callCount > 0 ? Math.round(v.totalTokens / v.callCount) : 0
+		}))
+		.sort((a, b) => b.costUsd - a.costUsd);
+
+	return {
+		dailyCosts: toArray(dailyMap, 30),
+		weeklyCosts: toArray(weeklyMap, 12),
+		monthlyCosts: toArray(monthlyMap, 6),
+		taskCosts
+	};
+}
+
 export async function getCostByUser() {
 	return db
 		.select({

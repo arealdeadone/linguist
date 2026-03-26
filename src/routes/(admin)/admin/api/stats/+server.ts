@@ -3,21 +3,29 @@ import { sql } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import type { AdminStats } from '$lib/types';
 import { getAllLearners } from '$lib/server/data/learners';
-import { getTotalCost } from '$lib/server/data/ai-usage';
 import { db } from '$lib/server/db';
-import { aiUsageLogs, lessons, conversations, quizResults } from '$lib/server/schema';
+import { aiUsageLogs } from '$lib/server/schema';
 
 export const GET: RequestHandler = async () => {
 	try {
-		const [learners, totalCostUsd, costToday, lessonRows, conversationRows, reviewRows] =
-			await Promise.all([
-				getAllLearners(),
-				getTotalCost(),
-				getTotalCost(new Date(new Date().toISOString().slice(0, 10))),
-				db.select({ count: sql<number>`count(*)::int` }).from(lessons),
-				db.select({ count: sql<number>`count(*)::int` }).from(conversations),
-				db.select({ count: sql<number>`count(*)::int` }).from(quizResults)
-			]);
+		const [learners, costRows, countRows] = await Promise.all([
+			getAllLearners(),
+			db
+				.select({
+					totalCost: sql<number>`coalesce(sum(${aiUsageLogs.costUsd}), 0)`,
+					costToday: sql<number>`coalesce(sum(CASE WHEN ${aiUsageLogs.createdAt} >= CURRENT_DATE THEN ${aiUsageLogs.costUsd} ELSE 0 END), 0)`
+				})
+				.from(aiUsageLogs),
+			db.execute(sql`
+				SELECT
+					(SELECT count(*)::int FROM lessons) AS total_lessons,
+					(SELECT count(*)::int FROM conversations) AS total_conversations,
+					(SELECT count(*)::int FROM quiz_results) AS total_reviews
+			`)
+		]);
+
+		const costs = costRows[0] ?? { totalCost: 0, costToday: 0 };
+		const counts = (countRows[0] ?? {}) as Record<string, number>;
 
 		const languagePairMap = new Map<
 			string,
@@ -40,11 +48,11 @@ export const GET: RequestHandler = async () => {
 		const payload: AdminStats = {
 			totalLearners: learners.length,
 			languagePairs: [...languagePairMap.values()].sort((a, b) => b.count - a.count),
-			totalCostUsd,
-			costToday,
-			totalLessons: lessonRows[0]?.count ?? 0,
-			totalConversations: conversationRows[0]?.count ?? 0,
-			totalReviews: reviewRows[0]?.count ?? 0
+			totalCostUsd: costs.totalCost,
+			costToday: costs.costToday,
+			totalLessons: counts.total_lessons ?? 0,
+			totalConversations: counts.total_conversations ?? 0,
+			totalReviews: counts.total_reviews ?? 0
 		};
 
 		return json(payload);
