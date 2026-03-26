@@ -111,17 +111,7 @@ const authHandle: Handle = async ({ event, resolve }) => {
 		throw redirect(303, '/login');
 	}
 
-	return resolve(event);
-};
-
-const adminGuard: Handle = async ({ event, resolve }) => {
-	if (env.TEST_MODE === 'true' && event.request.headers.get('x-test-admin') === 'true') {
-		return resolve(event);
-	}
-
 	if (event.url.pathname.startsWith('/admin')) {
-		const { user } = await event.locals.safeGetSession();
-
 		if (!user || user.id !== env.ADMIN_SUPABASE_USER_ID) {
 			throw redirect(303, '/login');
 		}
@@ -130,4 +120,4 @@ const adminGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle: Handle = sequence(supabaseHandle, authHandle, adminGuard);
+export const handle: Handle = sequence(supabaseHandle, authHandle);

@@ -9,7 +9,11 @@ const isSupabase = config.databaseUrl.includes('supabase.com');
 const client = postgres(config.databaseUrl, {
 	prepare: !isPooler,
 	ssl: isSupabase ? 'require' : undefined,
-	connection: { application_name: 'linguist-worker' }
+	connect_timeout: 30,
+	idle_timeout: 20,
+	max: 3,
+	connection: { application_name: 'linguist-worker' },
+	onnotice: () => {}
 });
 
-export const db = drizzle(client, { schema });
+export const db = drizzle(client, { schema, logger: false });
