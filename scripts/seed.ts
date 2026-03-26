@@ -19,19 +19,23 @@ import {
 } from '../src/lib/server/prompts/seed-prompts';
 
 function loadEnv() {
-	try {
-		const content = readFileSync('.env', 'utf-8');
-		for (const line of content.split('\n')) {
-			const trimmed = line.trim();
-			if (!trimmed || trimmed.startsWith('#')) continue;
-			const eqIdx = trimmed.indexOf('=');
-			if (eqIdx === -1) continue;
-			const key = trimmed.slice(0, eqIdx);
-			const val = trimmed.slice(eqIdx + 1);
-			if (!process.env[key]) process.env[key] = val;
+	const envFiles = ['.env.local', '.env'];
+	for (const file of envFiles) {
+		try {
+			const content = readFileSync(file, 'utf-8');
+			for (const line of content.split('\n')) {
+				const trimmed = line.trim();
+				if (!trimmed || trimmed.startsWith('#')) continue;
+				const eqIdx = trimmed.indexOf('=');
+				if (eqIdx === -1) continue;
+				const key = trimmed.slice(0, eqIdx);
+				const val = trimmed.slice(eqIdx + 1);
+				if (!process.env[key]) process.env[key] = val;
+			}
+			break;
+		} catch {
+			continue;
 		}
-	} catch {
-		/* no .env file */
 	}
 }
 
