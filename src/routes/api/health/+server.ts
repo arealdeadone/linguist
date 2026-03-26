@@ -18,7 +18,9 @@ export const GET: RequestHandler = async () => {
 		checks.postgres = 'ok';
 		postgresHealthy = true;
 	} catch (e) {
-		checks.postgres = e instanceof Error ? e.message : 'connection failed';
+		const err = e instanceof Error ? e : new Error(String(e));
+		const cause = (err as { cause?: Error }).cause;
+		checks.postgres = cause?.message ?? err.message;
 	}
 
 	if (!env.REDIS_URL) {
