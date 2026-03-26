@@ -27,6 +27,13 @@ export interface LanguageTestSummary {
 	modelRouting: Record<TaskType, string>;
 }
 
+const SUPPORTED_MODELS = new Set([
+	'gpt-4o',
+	'gpt-4o-mini',
+	'gemini-3-flash-preview',
+	'claude-sonnet-4-6'
+]);
+
 function getValidatedModelRouting(
 	targetLanguage: string,
 	candidate: unknown
@@ -39,8 +46,8 @@ function getValidatedModelRouting(
 
 	for (const [task, defaultModel] of Object.entries(defaults) as [TaskType, string][]) {
 		const maybeModel = candidateRecord[task];
-		validated[task] =
-			typeof maybeModel === 'string' && maybeModel.trim() ? maybeModel.trim() : defaultModel;
+		const model = typeof maybeModel === 'string' ? maybeModel.trim() : '';
+		validated[task] = SUPPORTED_MODELS.has(model) ? model : defaultModel;
 	}
 
 	return validated;
@@ -144,19 +151,25 @@ You must evaluate:
 4. Latency: Is the round-trip time acceptable for interactive learning?
 5. Overall feasibility: Can this language pair work in a production learning app?
 
+IMPORTANT: For modelRouting, you MUST use ONLY these exact model identifiers — no other values are accepted:
+- "gpt-4o"
+- "gpt-4o-mini"
+- "gemini-3-flash-preview"
+- "claude-sonnet-4-6"
+
 Return ONLY valid JSON:
 {
   "recommendation": "viable" | "marginal" | "not_viable",
   "reasoning": "2-3 sentence summary of why",
   "agentAnalysis": "Detailed paragraph analyzing each aspect: TTS quality, STT accuracy, evaluation reliability, latency, and any specific concerns for this language pair. Include specific observations from the test data. Mention which models work well and which might need alternatives.",
   "modelRouting": {
-    "lesson_generation": "recommended model name from available list",
-    "conversation": "recommended model name",
-    "grammar_evaluation": "recommended model name",
-    "flashcard": "recommended model name",
-    "quiz": "recommended model name",
-    "summary": "recommended model name",
-    "code_switch": "recommended model name"
+    "lesson_generation": "one of: gpt-4o | gpt-4o-mini | gemini-3-flash-preview | claude-sonnet-4-6",
+    "conversation": "one of: gpt-4o | gpt-4o-mini | gemini-3-flash-preview | claude-sonnet-4-6",
+    "grammar_evaluation": "one of: gpt-4o | gpt-4o-mini | gemini-3-flash-preview | claude-sonnet-4-6",
+    "flashcard": "one of: gpt-4o | gpt-4o-mini | gemini-3-flash-preview | claude-sonnet-4-6",
+    "quiz": "one of: gpt-4o | gpt-4o-mini | gemini-3-flash-preview | claude-sonnet-4-6",
+    "summary": "one of: gpt-4o | gpt-4o-mini | gemini-3-flash-preview | claude-sonnet-4-6",
+    "code_switch": "one of: gpt-4o | gpt-4o-mini | gemini-3-flash-preview | claude-sonnet-4-6"
   }
 }`
 			},
@@ -167,13 +180,11 @@ Return ONLY valid JSON:
 Target language: ${targetLanguageName} (${targetLanguage})
 Source/instruction language: ${sourceLanguageName} (${sourceLanguage})
 
-Available models in our setup:
-- TTS: gpt-4o-mini-tts
-- STT: gpt-4o-transcribe
-- Evaluation: claude-sonnet-4-6 (grammar_evaluation task)
-- Lesson generation: gemini-3-flash-preview
-- Conversation: gpt-4o (for well-resourced languages) or gemini-3-flash-preview
-- Quiz: gpt-4o-mini
+Available models in our setup (use ONLY these exact IDs in modelRouting):
+- gpt-4o (best for well-resourced languages)
+- gpt-4o-mini (lightweight, good for quiz/flashcard/summary)
+- gemini-3-flash-preview (good for lesson generation, conversation for less-resourced languages)
+- claude-sonnet-4-6 (best for grammar evaluation)
 
 Round-trip test results (${results.length} sentences):
 ${JSON.stringify(resultsForAgent, null, 2)}
