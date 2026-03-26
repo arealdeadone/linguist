@@ -61,7 +61,7 @@
 		summary = null;
 		liveResults = [];
 		totalSentences = 0;
-		statusMessage = 'Starting test...';
+		statusMessage = 'Running test...';
 
 		try {
 			const res = await fetch('/admin/api/language-test', {
@@ -82,50 +82,11 @@
 				return;
 			}
 
-			const reader = res.body?.getReader();
-			if (!reader) {
-				showToast('Stream not available.', 'error');
-				return;
-			}
-
-			const decoder = new TextDecoder();
-			let buffer = '';
-
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-
-				buffer += decoder.decode(value, { stream: true });
-				const lines = buffer.split('\n\n');
-				buffer = lines.pop() ?? '';
-
-				for (const line of lines) {
-					const dataLine = line.trim();
-					if (!dataLine.startsWith('data: ')) continue;
-					try {
-						const parsed = JSON.parse(dataLine.slice(6));
-
-						if (parsed.event === 'status') {
-							statusMessage = parsed.message ?? '';
-						} else if (parsed.event === 'sentences') {
-							totalSentences = parsed.total ?? 0;
-						} else if (parsed.event === 'result') {
-							liveResults = [...liveResults, parsed.result];
-						} else if (parsed.event === 'complete') {
-							summary = parsed as LanguageTestSummary;
-							statusMessage = '';
-						} else if (parsed.event === 'error') {
-							showToast(parsed.message ?? 'Test failed.', 'error');
-						}
-					} catch {
-						console.error('Failed to parse SSE:', dataLine);
-					}
-				}
-			}
-
-			if (summary) {
-				showToast('Language test complete.', 'success');
-			}
+			const result = (await res.json()) as LanguageTestSummary;
+			summary = result;
+			liveResults = result.results;
+			totalSentences = result.results.length;
+			showToast('Language test complete.', 'success');
 		} catch (error) {
 			console.error('Language test request failed:', error);
 			showToast('Failed to run language test.', 'error');
