@@ -16,6 +16,26 @@ function generatePath(word: string, language: string): string {
 	return `${normalizeLanguage(language)}/${hash}.mp3`;
 }
 
+export async function uploadTTSBuffer(audioBuffer: Buffer, word: string, language: string): Promise<string> {
+	const normalizedLanguage = normalizeLanguage(language);
+	const path = generatePath(word, normalizedLanguage);
+	const admin = getSupabaseAdmin();
+	const bucket = admin.storage.from('tts-audio');
+
+	const { error } = await bucket.upload(path, audioBuffer, {
+		contentType: 'audio/mpeg',
+		cacheControl: '31536000',
+		upsert: true
+	});
+
+	if (error) {
+		throw new Error(`TTS upload failed for "${word}": ${error.message}`);
+	}
+
+	const { data } = bucket.getPublicUrl(path);
+	return data.publicUrl;
+}
+
 export async function generateAndUploadTTS(word: string, language: string): Promise<string> {
 	const normalizedLanguage = normalizeLanguage(language);
 	const hash = generateHash(word);

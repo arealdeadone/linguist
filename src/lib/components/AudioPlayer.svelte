@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { showToast } from '$lib/stores/toast.svelte';
 
+	const blobCache = new Map<string, string>();
+
 	let {
 		text,
 		language = 'zh',
@@ -28,10 +30,11 @@
 		isLoading = true;
 		try {
 			let url: string;
-			let isBlobUrl = false;
 
 			if (audioUrl) {
 				url = audioUrl;
+			} else if (blobCache.has(text)) {
+				url = blobCache.get(text)!;
 			} else {
 				const res = await fetch('/api/speech/tts', {
 					method: 'POST',
@@ -41,7 +44,7 @@
 				if (!res.ok) throw new Error('TTS failed');
 				const blob = await res.blob();
 				url = URL.createObjectURL(blob);
-				isBlobUrl = true;
+				blobCache.set(text, url);
 			}
 
 			const audio = new Audio(url);
@@ -49,7 +52,6 @@
 			isPlaying = true;
 			audio.onended = () => {
 				isPlaying = false;
-				if (isBlobUrl) URL.revokeObjectURL(url);
 			};
 			audio.onerror = () => {
 				isPlaying = false;

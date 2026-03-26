@@ -62,15 +62,18 @@ export async function playAudio(url: string): Promise<void> {
 	await audio.play();
 }
 
+const ttsCache = new Map<string, string>();
+
 export async function playTTS(text: string, preGeneratedUrl?: string): Promise<void> {
 	isPlaying = true;
 
 	try {
 		let url: string;
-		let isBlobUrl = false;
 
 		if (preGeneratedUrl) {
 			url = preGeneratedUrl;
+		} else if (ttsCache.has(text)) {
+			url = ttsCache.get(text)!;
 		} else {
 			const res = await fetch('/api/speech/tts', {
 				method: 'POST',
@@ -84,14 +87,13 @@ export async function playTTS(text: string, preGeneratedUrl?: string): Promise<v
 
 			const blob = await res.blob();
 			url = URL.createObjectURL(blob);
-			isBlobUrl = true;
+			ttsCache.set(text, url);
 		}
 
 		const audio = new Audio(url);
 
 		audio.onended = () => {
 			isPlaying = false;
-			if (isBlobUrl) URL.revokeObjectURL(url);
 		};
 
 		audio.onerror = () => {

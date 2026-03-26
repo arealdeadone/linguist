@@ -3,7 +3,7 @@ import { json } from '@sveltejs/kit';
 import { getAIService } from '$lib/server/ai-service';
 import { trackUsage } from '$lib/server/cost-tracker';
 import { cacheTTS, getCachedTTS } from '$lib/server/redis';
-import { generateAndUploadTTS } from '$lib/server/tts-storage';
+import { uploadTTSBuffer } from '$lib/server/tts-storage';
 import { backfillVocabAudioUrl } from '$lib/server/data/vocabulary';
 import { TTS_MODEL, TTS_VOICE } from '$lib/constants';
 
@@ -75,10 +75,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	const learnerId = locals.learnerId;
 	if (learnerId) {
-		const lang = detectLanguage(text);
-		generateAndUploadTTS(text, lang)
-			.then((url) => backfillVocabAudioUrl(learnerId, text, url))
-			.catch((e) => console.error('TTS backfill failed:', e));
+		try {
+			const lang = detectLanguage(text);
+			const cdnUrl = await uploadTTSBuffer(audio, text, lang);
+			await backfillVocabAudioUrl(learnerId, text, cdnUrl);
+		} catch (e) {
+			console.error('TTS backfill failed:', e instanceof Error ? e.message : e);
+		}
 	}
 
 	return new Response(new Uint8Array(audio), {
