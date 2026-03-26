@@ -43,22 +43,28 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				? [{ text: plan.colloquial_phrase, language: learner.targetLanguage }]
 				: [])
 		];
-		const ttsUrls = await generateBatchTTS(ttsItems);
+		const ttsResult = await generateBatchTTS(ttsItems);
 
 		for (const vocab of plan.vocabulary_targets) {
-			const url = ttsUrls.get(vocab.word);
+			const url = ttsResult.urls.get(vocab.word);
 			if (url) {
 				vocab.audioUrl = url;
 			}
 		}
 
 		if (plan.colloquial_phrase) {
-			const phraseUrl = ttsUrls.get(plan.colloquial_phrase);
+			const phraseUrl = ttsResult.urls.get(plan.colloquial_phrase);
 			if (phraseUrl) {
 				plan.colloquial_phrase_audio_url = phraseUrl;
 			}
 		}
 
+		if (ttsResult.failures.length > 0) {
+			console.error(`TTS pre-generation: ${ttsResult.failures.length} of ${ttsItems.length} failed:`,
+				ttsResult.failures.map(f => `${f.text}: ${f.error}`).join('; '));
+		}
+
+		let quizWarning: string | null = null;
 		try {
 			const quizType = selectQuizTypeByCefr(plan.cefr_level as CefrLevel);
 			const quizResult = await getAIService().generateQuiz({
@@ -73,7 +79,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				questions: (quizResult as { questions?: unknown[] }).questions ?? []
 			};
 		} catch (error) {
-			console.error('Quiz pre-generation failed:', error instanceof Error ? error.message : error);
+			quizWarning = error instanceof Error ? error.message : 'Quiz pre-generation failed';
+			console.error('Quiz pre-generation failed:', quizWarning);
 		}
 
 		const lesson = await createLesson({
@@ -97,7 +104,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			});
 		}
 
-		return json(lesson, { status: 201 });
+		const warnings: string[] = [];
+		if (ttsResult.failures.length > 0) {
+			warnings.push(`${ttsResult.failures.length} vocab words missing audio`);
+		}
+		if (quizWarning) {
+			warnings.push('Quiz will be generated on-demand');
+		}
+
+		return json({ ...lesson, warnings: warnings.length > 0 ? warnings : undefined }, { status: 201 });
 	} catch (error) {
 		console.error('Lesson generation failed:', error);
 		const message = error instanceof Error ? error.message : 'Failed to generate lesson';

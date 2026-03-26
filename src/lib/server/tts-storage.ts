@@ -16,66 +16,69 @@ function generatePath(word: string, language: string): string {
 	return `${normalizeLanguage(language)}/${hash}.mp3`;
 }
 
-export async function generateAndUploadTTS(word: string, language: string): Promise<string | null> {
-	try {
-		const normalizedLanguage = normalizeLanguage(language);
-		const hash = generateHash(word);
-		const path = generatePath(word, normalizedLanguage);
-		const admin = getSupabaseAdmin();
-		const bucket = admin.storage.from('tts-audio');
+export async function generateAndUploadTTS(word: string, language: string): Promise<string> {
+	const normalizedLanguage = normalizeLanguage(language);
+	const hash = generateHash(word);
+	const path = generatePath(word, normalizedLanguage);
+	const admin = getSupabaseAdmin();
+	const bucket = admin.storage.from('tts-audio');
 
-		const { data: files, error: listError } = await bucket.list(normalizedLanguage, {
-			search: hash
-		});
-		if (listError) {
-			console.error('TTS list check failed:', listError.message);
-		} else {
-			const exists = files?.some((file) => file.name === `${hash}.mp3`) ?? false;
-			if (exists) {
-				const { data } = bucket.getPublicUrl(path);
-				return data.publicUrl;
-			}
-		}
+	const { data: files, error: listError } = await bucket.list(normalizedLanguage, {
+		search: hash
+	});
 
-		const audioBuffer = await getAIService().synthesize({ text: word });
+	if (listError) {
+		throw new Error(`TTS storage list failed for "${word}": ${listError.message}`);
+	}
 
-		const { error } = await bucket.upload(path, audioBuffer, {
-			contentType: 'audio/mpeg',
-			cacheControl: '31536000',
-			upsert: true
-		});
-
-		if (error) {
-			console.error('TTS upload failed:', error.message);
-			return null;
-		}
-
+	const exists = files?.some((file) => file.name === `${hash}.mp3`) ?? false;
+	if (exists) {
 		const { data } = bucket.getPublicUrl(path);
 		return data.publicUrl;
-	} catch (error) {
-		console.error('TTS pre-generation failed:', error instanceof Error ? error.message : error);
-		return null;
 	}
+
+	const audioBuffer = await getAIService().synthesize({ text: word });
+
+	const { error } = await bucket.upload(path, audioBuffer, {
+		contentType: 'audio/mpeg',
+		cacheControl: '31536000',
+		upsert: true
+	});
+
+	if (error) {
+		throw new Error(`TTS upload failed for "${word}": ${error.message}`);
+	}
+
+	const { data } = bucket.getPublicUrl(path);
+	return data.publicUrl;
+}
+
+export interface BatchTTSResult {
+	urls: Map<string, string>;
+	failures: Array<{ text: string; error: string }>;
 }
 
 export async function generateBatchTTS(
 	items: Array<{ text: string; language: string }>
-): Promise<Map<string, string>> {
-	const results = new Map<string, string>();
+): Promise<BatchTTSResult> {
+	const urls = new Map<string, string>();
+	const failures: Array<{ text: string; error: string }> = [];
+
 	const settled = await Promise.allSettled(
 		items.map(async ({ text, language }) => {
 			const url = await generateAndUploadTTS(text, language);
-			if (url) {
-				results.set(text, url);
-			}
+			urls.set(text, url);
 		})
 	);
 
-	for (const result of settled) {
+	for (let i = 0; i < settled.length; i++) {
+		const result = settled[i];
 		if (result.status === 'rejected') {
-			console.error('Batch TTS item failed:', result.reason);
+			const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+			failures.push({ text: items[i].text, error: errorMsg });
+			console.error(`TTS batch failure [${items[i].text}]:`, errorMsg);
 		}
 	}
 
-	return results;
+	return { urls, failures };
 }
