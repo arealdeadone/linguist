@@ -6,6 +6,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const email = formData.get('email');
 		const password = formData.get('password');
+		const captchaToken = formData.get('captchaToken');
 
 		if (typeof email !== 'string' || typeof password !== 'string') {
 			return fail(400, { error: 'Email and password are required.' });
@@ -15,9 +16,14 @@ export const actions: Actions = {
 			return fail(400, { error: 'Email and password are required.' });
 		}
 
+		if (typeof captchaToken !== 'string' || !captchaToken.trim()) {
+			return fail(400, { error: 'Please complete the captcha.' });
+		}
+
 		const { error } = await supabase.auth.signInWithPassword({
 			email: email.trim(),
-			password: password.trim()
+			password: password.trim(),
+			options: { captchaToken: captchaToken.trim() }
 		});
 
 		if (error) {

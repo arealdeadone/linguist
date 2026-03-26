@@ -10,6 +10,14 @@ declare global {
 			learnerId: string | null;
 		}
 	}
+
+	interface Window {
+		hcaptcha: {
+			render: (id: string, options: Record<string, unknown>) => string;
+			reset: (widgetId: string) => void;
+		};
+		onHcaptchaLoad: () => void;
+	}
 }
 
 export {};

@@ -7,9 +7,49 @@
 	$effect(() => {
 		if (form?.error) {
 			showToast(form.error, 'error');
+			resetCaptcha();
+		}
+	});
+
+	let captchaToken = $state('');
+	let captchaWidgetId = $state<string | null>(null);
+
+	function onCaptchaVerify(token: string) {
+		captchaToken = token;
+	}
+
+	function resetCaptcha() {
+		captchaToken = '';
+		if (captchaWidgetId !== null && window.hcaptcha) {
+			window.hcaptcha.reset(captchaWidgetId);
+		}
+	}
+
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+
+		function renderWidget() {
+			const el = document.getElementById('hcaptcha-container');
+			if (!el || !window.hcaptcha) return;
+			if (captchaWidgetId !== null) return;
+			captchaWidgetId = window.hcaptcha.render('hcaptcha-container', {
+				sitekey: '67969038-66d4-4566-97dc-f6a4df0cebe6',
+				theme: 'dark',
+				callback: onCaptchaVerify
+			});
+		}
+
+		if (window.hcaptcha) {
+			renderWidget();
+		} else {
+			window.onHcaptchaLoad = renderWidget;
 		}
 	});
 </script>
+
+<svelte:head>
+	<script src="https://js.hcaptcha.com/1/api.js?onload=onHcaptchaLoad&render=explicit" async defer></script>
+</svelte:head>
 
 <div class="flex min-h-screen items-center justify-center bg-gray-950 px-4 py-12 text-gray-100">
 	<div
@@ -57,9 +97,14 @@
 				/>
 			</div>
 
+			<input type="hidden" name="captchaToken" value={captchaToken} />
+
+			<div id="hcaptcha-container" class="flex justify-center"></div>
+
 			<button
 				type="submit"
-				class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500"
+				disabled={!captchaToken}
+				class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				Sign in
 			</button>
