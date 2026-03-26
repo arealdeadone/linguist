@@ -3,24 +3,21 @@ import { sql } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import type { AdminStats } from '$lib/types';
 import { getAllLearners } from '$lib/server/data/learners';
+import { getTotalCost } from '$lib/server/data/ai-usage';
 import { db } from '$lib/server/db';
+import { aiUsageLogs, lessons, conversations, quizResults } from '$lib/server/schema';
 
 export const GET: RequestHandler = async () => {
 	try {
-		const [learners, countsRows] = await Promise.all([
-			getAllLearners(),
-			db.execute(sql`
-				SELECT
-					coalesce(sum(cost_usd), 0)::float AS total_cost,
-					coalesce(sum(CASE WHEN created_at >= CURRENT_DATE THEN cost_usd ELSE 0 END), 0)::float AS cost_today,
-					(SELECT count(*)::int FROM lessons) AS total_lessons,
-					(SELECT count(*)::int FROM conversations) AS total_conversations,
-					(SELECT count(*)::int FROM quiz_results) AS total_reviews
-				FROM ai_usage_logs
-			`)
-		]);
-
-		const counts = (countsRows[0] ?? {}) as Record<string, number>;
+		const [learners, totalCostUsd, costToday, lessonRows, conversationRows, reviewRows] =
+			await Promise.all([
+				getAllLearners(),
+				getTotalCost(),
+				getTotalCost(new Date(new Date().toISOString().slice(0, 10))),
+				db.select({ count: sql<number>`count(*)::int` }).from(lessons),
+				db.select({ count: sql<number>`count(*)::int` }).from(conversations),
+				db.select({ count: sql<number>`count(*)::int` }).from(quizResults)
+			]);
 
 		const languagePairMap = new Map<
 			string,
@@ -43,16 +40,16 @@ export const GET: RequestHandler = async () => {
 		const payload: AdminStats = {
 			totalLearners: learners.length,
 			languagePairs: [...languagePairMap.values()].sort((a, b) => b.count - a.count),
-			totalCostUsd: counts.total_cost ?? 0,
-			costToday: counts.cost_today ?? 0,
-			totalLessons: counts.total_lessons ?? 0,
-			totalConversations: counts.total_conversations ?? 0,
-			totalReviews: counts.total_reviews ?? 0
+			totalCostUsd,
+			costToday,
+			totalLessons: lessonRows[0]?.count ?? 0,
+			totalConversations: conversationRows[0]?.count ?? 0,
+			totalReviews: reviewRows[0]?.count ?? 0
 		};
 
 		return json(payload);
 	} catch (error) {
-		console.error('Failed to fetch admin stats', error);
+		console.error('Failed to fetch admin stats:', error);
 		return json({ error: 'Failed to fetch admin stats' }, { status: 500 });
 	}
 };

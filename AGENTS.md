@@ -85,6 +85,7 @@ linguist/
 - Modifying `db.ts` without verifying Vercel serverless compatibility — NEVER. Any change to `db.ts` must preserve: (1) lazy connection via Proxy, (2) `prepare: false` for Supabase pooler, (3) `ssl: 'require'` for Supabase, (4) `connect_timeout: 30`, (5) `max: 1` for serverless
 - Modifying `svelte.config.js` adapter `maxDuration` below 60 — NEVER. Supabase pooler cold-start + SSL handshake needs this headroom
 - Creating new DB/Redis/external service clients at module scope — NEVER on Vercel. All external connections must be lazy-initialized (created on first use, not on import). Module-scope initialization runs during cold start and competes with Vercel's function timeout
+- `db.execute(sql\`...\`)` with parameters on Vercel — NEVER. Drizzle's `execute()` with parameterized tagged template literals fails when `prepare: false` (required for Supabase pooler). Use Drizzle query builder (`db.select()`, `db.update()`, etc.) instead. Parameter-free queries like `SELECT 1` are safe. The `claimNextJob` CTE in ai-jobs.ts is an exception (worker-only, not on Vercel)
 
 ## ZERO TOLERANCE: NO SILENT FAILURES (ABSOLUTE RULE)
 

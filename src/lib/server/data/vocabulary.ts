@@ -75,14 +75,13 @@ export async function updateModalityScore(
 	modality: 'listening' | 'speaking' | 'contextual',
 	score: number
 ) {
-	const path = `{${modality}}`;
-	await db.execute(sql`
-		UPDATE vocabulary
-		SET
-			modality_scores = jsonb_set(modality_scores, ${path}::text[], to_jsonb(${score}::int), true),
-			updated_at = now()
-		WHERE id = ${id}
-	`);
+	await db
+		.update(vocabulary)
+		.set({
+			modalityScores: sql`jsonb_set(modality_scores, ${`{${modality}}`}::text[], to_jsonb(${score}::int), true)`,
+			updatedAt: new Date()
+		})
+		.where(eq(vocabulary.id, id));
 }
 
 export async function getVocabCount(learnerId: string) {
