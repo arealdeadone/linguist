@@ -3,58 +3,51 @@ import { sql } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import type { AdminStats } from '$lib/types';
 import { getAllLearners } from '$lib/server/data/learners';
-import { getTotalCost } from '$lib/server/data/ai-usage';
 import { db } from '$lib/server/db';
-import { conversations, lessons, quizResults } from '$lib/server/schema';
 
 export const GET: RequestHandler = async () => {
 	try {
-		const startOfToday = new Date();
-		startOfToday.setHours(0, 0, 0, 0);
-
-		const [
-			allLearners,
-			totalCostUsd,
-			costToday,
-			lessonCountRows,
-			conversationCountRows,
-			reviewCountRows
-		] = await Promise.all([
+		const [learners, countsRows] = await Promise.all([
 			getAllLearners(),
-			getTotalCost(),
-			getTotalCost(startOfToday),
-			db.select({ count: sql<number>`count(*)::int` }).from(lessons),
-			db.select({ count: sql<number>`count(*)::int` }).from(conversations),
-			db.select({ count: sql<number>`count(*)::int` }).from(quizResults)
+			db.execute(sql`
+				SELECT
+					coalesce(sum(cost_usd), 0)::float AS total_cost,
+					coalesce(sum(CASE WHEN created_at >= CURRENT_DATE THEN cost_usd ELSE 0 END), 0)::float AS cost_today,
+					(SELECT count(*)::int FROM lessons) AS total_lessons,
+					(SELECT count(*)::int FROM conversations) AS total_conversations,
+					(SELECT count(*)::int FROM quiz_results) AS total_reviews
+				FROM ai_usage_logs
+			`)
 		]);
+
+		const counts = (countsRows[0] ?? {}) as Record<string, number>;
 
 		const languagePairMap = new Map<
 			string,
 			{ targetLanguage: string; lessonLanguage: string; count: number }
 		>();
-		for (const learner of allLearners) {
+		for (const learner of learners) {
 			const key = `${learner.targetLanguage}::${learner.lessonLanguage}`;
 			const existing = languagePairMap.get(key);
 			if (existing) {
 				existing.count += 1;
-				continue;
+			} else {
+				languagePairMap.set(key, {
+					targetLanguage: learner.targetLanguage,
+					lessonLanguage: learner.lessonLanguage,
+					count: 1
+				});
 			}
-
-			languagePairMap.set(key, {
-				targetLanguage: learner.targetLanguage,
-				lessonLanguage: learner.lessonLanguage,
-				count: 1
-			});
 		}
 
 		const payload: AdminStats = {
-			totalLearners: allLearners.length,
+			totalLearners: learners.length,
 			languagePairs: [...languagePairMap.values()].sort((a, b) => b.count - a.count),
-			totalCostUsd,
-			costToday,
-			totalLessons: lessonCountRows[0].count,
-			totalConversations: conversationCountRows[0].count,
-			totalReviews: reviewCountRows[0].count
+			totalCostUsd: counts.total_cost ?? 0,
+			costToday: counts.cost_today ?? 0,
+			totalLessons: counts.total_lessons ?? 0,
+			totalConversations: counts.total_conversations ?? 0,
+			totalReviews: counts.total_reviews ?? 0
 		};
 
 		return json(payload);
