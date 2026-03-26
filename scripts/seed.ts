@@ -448,7 +448,7 @@ async function seed() {
 		.insert(learners)
 		.values({
 			name: 'Arvind',
-			pin: '1234',
+			pin: '****',
 			targetLanguage: 'zh',
 			lessonLanguage: 'hi',
 			cefrLevel: 'A1',
@@ -460,7 +460,7 @@ async function seed() {
 		.insert(learners)
 		.values({
 			name: 'อุ้ม',
-			pin: '5678',
+			pin: '****',
 			targetLanguage: 'te',
 			lessonLanguage: 'th',
 			cefrLevel: 'A1',
