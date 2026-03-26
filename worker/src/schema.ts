@@ -15,7 +15,7 @@ import {
 export const learners = pgTable('learners', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	name: text('name').notNull(),
-	pin: text('pin'),
+	supabaseUserId: text('supabase_user_id').unique(),
 	targetLanguage: text('target_language').notNull(),
 	lessonLanguage: text('lesson_language').notNull(),
 	cefrLevel: text('cefr_level').notNull().default('A1'),
@@ -35,6 +35,7 @@ export const vocabulary = pgTable(
 		romanization: text('romanization'),
 		meaning: text('meaning'),
 		sceneDescription: text('scene_description'),
+		audioUrl: text('audio_url'),
 		cefrLevel: text('cefr_level').notNull(),
 		sm2Repetition: integer('sm2_repetition').notNull().default(0),
 		sm2Interval: integer('sm2_interval').notNull().default(0),
