@@ -19,6 +19,7 @@ export interface VocabTarget {
   romanization: string;
   meaning: string;
   scene_description: string;
+  audioUrl?: string;
 }
 
 export interface LessonPlan {
@@ -33,7 +34,13 @@ export interface LessonPlan {
   review_words: string[];
   activities: Activity[];
   colloquial_phrase: string;
+  colloquial_phrase_audio_url?: string;
   cultural_note: string;
+  preGeneratedQuiz?: {
+    quizType: string;
+    words: string[];
+    questions: unknown[];
+  };
 }
 
 export interface Lesson {

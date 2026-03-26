@@ -62,27 +62,36 @@ export async function playAudio(url: string): Promise<void> {
 	await audio.play();
 }
 
-export async function playTTS(text: string): Promise<void> {
+export async function playTTS(text: string, preGeneratedUrl?: string): Promise<void> {
 	isPlaying = true;
 
 	try {
-		const res = await fetch('/api/speech/tts', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ text })
-		});
+		let url: string;
+		let isBlobUrl = false;
 
-		if (!res.ok) {
-			throw new Error('TTS failed');
+		if (preGeneratedUrl) {
+			url = preGeneratedUrl;
+		} else {
+			const res = await fetch('/api/speech/tts', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ text })
+			});
+
+			if (!res.ok) {
+				throw new Error('TTS failed');
+			}
+
+			const blob = await res.blob();
+			url = URL.createObjectURL(blob);
+			isBlobUrl = true;
 		}
 
-		const blob = await res.blob();
-		const url = URL.createObjectURL(blob);
 		const audio = new Audio(url);
 
 		audio.onended = () => {
 			isPlaying = false;
-			URL.revokeObjectURL(url);
+			if (isBlobUrl) URL.revokeObjectURL(url);
 		};
 
 		audio.onerror = () => {

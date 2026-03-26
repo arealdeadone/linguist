@@ -38,6 +38,7 @@ linguist/
 | Add API endpoint  | `src/routes/api/{name}/+server.ts`                           | Export GET/POST/PATCH, wrap in try/catch, return `json({ error }, { status })` on failure |
 | Add component     | `src/lib/components/{Name}.svelte`                           | Svelte 5 runes only, see components/AGENTS.md                                             |
 | Add AI feature    | `src/lib/server/`                                            | Use `chatJSON()`/`chatStream()`, pass `onUsage` for cost tracking                         |
+| Add TTS pre-generation | `src/lib/server/tts-storage.ts`                          | Dedup + upload public audio to Supabase Storage bucket `tts-audio`                        |
 | Add DB table      | `src/lib/server/schema.ts` → `src/lib/server/data/{name}.ts` | Run `npm run db:push` after                                                               |
 | Add store         | `src/lib/stores/{name}.svelte.ts`                            | Must use `.svelte.ts` extension for runes                                                 |
 | Add test          | Colocate as `*.test.ts`                                      | BDD in `bdd.integration.test.ts`, regression in `regression.integration.test.ts`          |

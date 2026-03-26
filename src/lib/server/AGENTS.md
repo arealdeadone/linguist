@@ -10,6 +10,7 @@ Backend services for AI, database, SRS, speech, cost tracking, and lesson genera
 | Route model            | `ai.ts` → `routeModel(task, lang)`               | DB-backed cache (`model_routing`) with hardcoded zh/te fallback   |
 | Transcribe audio       | `ai.ts` → `transcribe(file, lang)`               | Pass original `File` from formData, never Buffer→File             |
 | Generate speech        | `ai.ts` → `synthesize(text, instructions?)`      | Returns `Buffer`, cache via `redis.ts`                            |
+| Pre-generate TTS CDN audio | `tts-storage.ts`                            | Dedupes by hash and uploads public MP3 to Supabase Storage        |
 | Evaluate pronunciation | `pronunciation.ts`                               | Returns score=-1 + `systemError` on AI failure                    |
 | Detect tone errors     | `tones.ts`                                       | Chinese only, graceful fallback                                   |
 | Generate lesson        | `lessons.ts`                                     | Prompt includes i+1 ratio, time allocation, TPR rules             |

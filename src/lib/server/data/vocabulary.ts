@@ -27,6 +27,7 @@ export async function upsertVocab(data: {
 	meaning?: string;
 	sceneDescription?: string;
 	cefrLevel: string;
+	audioUrl?: string;
 }) {
 	const rows = await db
 		.insert(vocabulary)
@@ -37,6 +38,7 @@ export async function upsertVocab(data: {
 				romanization: data.romanization,
 				meaning: data.meaning,
 				sceneDescription: data.sceneDescription,
+				...(data.audioUrl !== undefined ? { audioUrl: data.audioUrl } : {}),
 				cefrLevel: data.cefrLevel,
 				updatedAt: new Date()
 			}

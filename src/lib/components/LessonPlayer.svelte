@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fly, fade } from 'svelte/transition';
 	import type { LessonPlan, ActivityType, VocabTarget } from '$lib/types/lesson';
+	import { selectQuizTypeByCefr } from '$lib/quiz-utils';
 	import AudioPlayer from './AudioPlayer.svelte';
 	import MultipleChoiceQuiz from './MultipleChoiceQuiz.svelte';
 	import FillInBlankQuiz from './FillInBlankQuiz.svelte';
@@ -49,6 +50,7 @@
 			meaning: string | null;
 			romanization: string | null;
 			sceneDescription: string | null;
+			audioUrl?: string | null;
 		}>;
 		initialStep?: number;
 	} = $props();
@@ -96,7 +98,8 @@
 				word,
 				meaning: fromDb?.meaning ?? fromLesson?.meaning ?? word,
 				romanization: fromDb?.romanization ?? fromLesson?.romanization ?? word,
-				sceneDescription: fromDb?.sceneDescription ?? fromLesson?.scene_description ?? word
+				sceneDescription: fromDb?.sceneDescription ?? fromLesson?.scene_description ?? word,
+				audioUrl: fromDb?.audioUrl ?? fromLesson?.audioUrl
 			};
 		})
 	);
@@ -190,6 +193,19 @@
 	async function startQuiz() {
 		const quizType = selectQuizTypeByCefr(cefrLevel);
 		activeQuizType = quizType;
+
+		if (plan.preGeneratedQuiz && plan.preGeneratedQuiz.quizType === quizType) {
+			quizData = plan.preGeneratedQuiz as { questions: AdaptiveQuestion[] | FillBlankQuestion[] };
+			quizLoading = false;
+			quizCompleted = false;
+			errorMessage = null;
+			if (isComplete) {
+				isComplete = false;
+				currentIndex = totalActivities;
+			}
+			return;
+		}
+
 		quizLoading = true;
 		quizData = null;
 		quizCompleted = false;
@@ -255,11 +271,6 @@
 		await markLessonComplete();
 	}
 
-	function selectQuizTypeByCefr(level: LessonPlan['cefr_level']): QuizType {
-		if (level === 'A1' || level === 'A2') return 'multiple_choice';
-		if (level === 'B1') return Math.random() < 0.5 ? 'multiple_choice' : 'fill_in_blank';
-		return Math.random() < 0.8 ? 'fill_in_blank' : 'multiple_choice';
-	}
 </script>
 
 <div class="mx-auto flex min-h-[calc(100vh-10rem)] max-w-2xl flex-col py-4">
@@ -399,7 +410,10 @@
 						</p>
 						<div class="flex flex-wrap gap-2">
 							{#each plan.vocabulary_targets as vocab}
-								{@const v = typeof vocab === 'string' ? { word: vocab, meaning: '' } : vocab}
+								{@const v =
+									typeof vocab === 'string'
+										? { word: vocab, meaning: '', audioUrl: undefined }
+										: vocab}
 								<span
 									class="inline-flex items-center gap-1.5 rounded-lg bg-surface-100 px-3 py-1.5 text-sm text-surface-700"
 								>
@@ -407,7 +421,12 @@
 									{#if v.meaning}
 										<span class="text-surface-400">— {v.meaning}</span>
 									{/if}
-									<AudioPlayer text={v.word} size="sm" />
+									<AudioPlayer
+										text={v.word}
+										language={targetLanguage}
+										audioUrl={v.audioUrl}
+										size="sm"
+									/>
 								</span>
 							{/each}
 						</div>
@@ -478,12 +497,17 @@
 							{#if plan.vocabulary_targets.length > 0}
 								<div class="mt-5 space-y-3">
 									{#each plan.vocabulary_targets as vocab}
-										{@const v =
-											typeof vocab === 'string'
-												? { word: vocab, romanization: '', meaning: '' }
-												: vocab}
+											{@const v =
+												typeof vocab === 'string'
+													? { word: vocab, romanization: '', meaning: '', audioUrl: undefined }
+													: vocab}
 										<div class="flex items-center gap-3 rounded-xl bg-surface-50 px-4 py-3">
-											<AudioPlayer text={v.word} size="md" />
+											<AudioPlayer
+												text={v.word}
+												language={targetLanguage}
+												audioUrl={v.audioUrl}
+												size="md"
+											/>
 											<span class="text-lg font-medium text-surface-800">{v.word}</span>
 											{#if v.romanization}
 												<span class="text-sm text-primary-500">{v.romanization}</span>
@@ -512,7 +536,12 @@
 										: (vocab as VocabTarget)}
 								<div class="rounded-2xl border border-surface-200 bg-white p-6 shadow-sm">
 									<div class="flex items-start gap-4">
-										<AudioPlayer text={v.word} size="lg" />
+										<AudioPlayer
+											text={v.word}
+											language={targetLanguage}
+											audioUrl={v.audioUrl}
+											size="lg"
+										/>
 										<div class="flex-1">
 											<p class="font-display text-3xl text-surface-900">{v.word}</p>
 											{#if v.romanization}
@@ -564,7 +593,12 @@
 										Phrase of the Day
 									</p>
 									<p class="mt-1 text-lg font-medium text-primary-700">{plan.colloquial_phrase}</p>
-									<AudioPlayer text={plan.colloquial_phrase} size="sm" />
+									<AudioPlayer
+										text={plan.colloquial_phrase}
+										language={targetLanguage}
+										audioUrl={plan.colloquial_phrase_audio_url}
+										size="sm"
+									/>
 								</div>
 							{/if}
 
@@ -608,7 +642,12 @@
 										class="w-full rounded-xl border border-surface-200 bg-surface-50 px-4 py-4 text-left transition-all hover:border-primary-200 hover:bg-white"
 									>
 										<div class="flex items-center gap-3">
-											<AudioPlayer text={card.word} language={targetLanguage} size="md" />
+											<AudioPlayer
+												text={card.word}
+												language={targetLanguage}
+												audioUrl={card.audioUrl}
+												size="md"
+											/>
 											<p class="font-display text-3xl text-surface-900">{card.word}</p>
 										</div>
 										{#if revealedReviewWords[idx]}

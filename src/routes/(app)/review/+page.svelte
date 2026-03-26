@@ -12,6 +12,7 @@
 		romanization: string | null;
 		meaning: string | null;
 		sceneDescription: string | null;
+		audioUrl: string | null;
 		cefrLevel: string;
 		sm2Repetition: number;
 		sm2Interval: number;
@@ -129,7 +130,7 @@
 
 	async function speakWord() {
 		if (!currentCard) return;
-		await playTTS(currentCard.word);
+		await playTTS(currentCard.word, currentCard.audioUrl ?? undefined);
 	}
 
 	function handleCardClick() {
@@ -236,7 +237,11 @@
 							<div
 								class="flex items-center gap-3 rounded-xl border border-surface-100 bg-white px-4 py-3 shadow-sm"
 							>
-								<AudioPlayer text={vocab.word} size="sm" />
+								<AudioPlayer
+									text={vocab.word}
+									audioUrl={vocab.audioUrl ?? undefined}
+									size="sm"
+								/>
 								<div class="flex-1 min-w-0">
 									<div class="flex items-baseline gap-2">
 										<span class="text-lg font-medium text-surface-900">{vocab.word}</span>

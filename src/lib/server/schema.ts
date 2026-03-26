@@ -35,6 +35,7 @@ export const vocabulary = pgTable(
 		romanization: text('romanization'),
 		meaning: text('meaning'),
 		sceneDescription: text('scene_description'),
+		audioUrl: text('audio_url'),
 		cefrLevel: text('cefr_level').notNull(),
 		sm2Repetition: integer('sm2_repetition').notNull().default(0),
 		sm2Interval: integer('sm2_interval').notNull().default(0),

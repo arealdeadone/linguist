@@ -4,8 +4,9 @@
 	let {
 		text,
 		language = 'zh',
-		size = 'md'
-	}: { text: string; language?: string; size?: 'sm' | 'md' | 'lg' } = $props();
+		size = 'md',
+		audioUrl
+	}: { text: string; language?: string; size?: 'sm' | 'md' | 'lg'; audioUrl?: string } = $props();
 
 	let isLoading = $state(false);
 	let isPlaying = $state(false);
@@ -26,20 +27,29 @@
 		if (isLoading || isPlaying) return;
 		isLoading = true;
 		try {
-			const res = await fetch('/api/speech/tts', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ text, language })
-			});
-			if (!res.ok) throw new Error('TTS failed');
-			const blob = await res.blob();
-			const url = URL.createObjectURL(blob);
+			let url: string;
+			let isBlobUrl = false;
+
+			if (audioUrl) {
+				url = audioUrl;
+			} else {
+				const res = await fetch('/api/speech/tts', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ text, language })
+				});
+				if (!res.ok) throw new Error('TTS failed');
+				const blob = await res.blob();
+				url = URL.createObjectURL(blob);
+				isBlobUrl = true;
+			}
+
 			const audio = new Audio(url);
 			isLoading = false;
 			isPlaying = true;
 			audio.onended = () => {
 				isPlaying = false;
-				URL.revokeObjectURL(url);
+				if (isBlobUrl) URL.revokeObjectURL(url);
 			};
 			audio.onerror = () => {
 				isPlaying = false;
