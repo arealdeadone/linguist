@@ -3,6 +3,8 @@ import { json } from '@sveltejs/kit';
 import { getAIService } from '$lib/server/ai-service';
 import { trackUsage } from '$lib/server/cost-tracker';
 import { cacheTTS, getCachedTTS } from '$lib/server/redis';
+import { generateAndUploadTTS } from '$lib/server/tts-storage';
+import { backfillVocabAudioUrl } from '$lib/server/data/vocabulary';
 import { TTS_MODEL, TTS_VOICE } from '$lib/constants';
 
 function isChinese(text: string): boolean {
@@ -25,7 +27,15 @@ function defaultInstructions(text: string): string {
 	return '';
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+function detectLanguage(text: string): string {
+	if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
+	if (/[\u0c00-\u0c7f]/.test(text)) return 'te';
+	if (/[\u0900-\u097f]/.test(text)) return 'hi';
+	if (/[\u0e00-\u0e7f]/.test(text)) return 'th';
+	return 'en';
+}
+
+export const POST: RequestHandler = async ({ request, locals }) => {
 	const body = await request.json();
 	const { text, voice, instructions } = body;
 
@@ -57,11 +67,19 @@ export const POST: RequestHandler = async ({ request }) => {
 		model: TTS_MODEL,
 		inputTokens: estimatedInput,
 		outputTokens: estimatedOutput
-	}).catch(console.error);
+	}).catch((e) => console.error('TTS cost tracking failed:', e));
 
 	cacheTTS(text, selectedVoice, TTS_MODEL, audio).catch((e) =>
-		console.error('TTS cache failed:', e)
+		console.error('TTS Redis cache failed:', e)
 	);
+
+	const learnerId = locals.learnerId;
+	if (learnerId) {
+		const lang = detectLanguage(text);
+		generateAndUploadTTS(text, lang)
+			.then((url) => backfillVocabAudioUrl(learnerId, text, url))
+			.catch((e) => console.error('TTS backfill failed:', e));
+	}
 
 	return new Response(new Uint8Array(audio), {
 		headers: {

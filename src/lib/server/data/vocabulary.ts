@@ -100,3 +100,16 @@ export async function getDueCount(learnerId: string) {
 		.where(and(eq(vocabulary.learnerId, learnerId), lte(vocabulary.nextReview, new Date())));
 	return rows[0].count;
 }
+
+export async function backfillVocabAudioUrl(learnerId: string, word: string, audioUrl: string) {
+	await db
+		.update(vocabulary)
+		.set({ audioUrl })
+		.where(
+			and(
+				eq(vocabulary.learnerId, learnerId),
+				eq(vocabulary.word, word),
+				sql`${vocabulary.audioUrl} IS NULL`
+			)
+		);
+}
