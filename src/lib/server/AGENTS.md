@@ -4,29 +4,29 @@ Backend services for AI, database, SRS, speech, cost tracking, and lesson genera
 
 ## WHERE TO LOOK
 
-| Task                   | File                                             | Notes                                                             |
-| ---------------------- | ------------------------------------------------ | ----------------------------------------------------------------- |
-| Get AI service         | `ai-service/index.ts` → `getAIService()`         | Returns LocalAIService or QueueAIService based on AI_MODE env     |
-| Call LLM               | `ai.ts` → `chat()`, `chatJSON()`, `chatStream()` | Throws `AIError` on failure. Pass `onUsage` for cost tracking     |
-| Route model            | `ai.ts` → `routeModel(task, lang)`               | DB-backed cache (`model_routing`) with hardcoded zh/te fallback   |
-| Transcribe audio       | `ai.ts` → `transcribe(file, lang)`               | Pass original `File` from formData, never Buffer→File             |
-| Generate speech        | `ai.ts` → `synthesize(text, instructions?)`      | Returns `Buffer`, cache via `redis.ts`                            |
-| Pre-generate TTS CDN audio | `tts-storage.ts`                            | Dedupes by hash and uploads public MP3 to Supabase Storage        |
-| Supabase admin client  | `supabase-admin.ts` → `getSupabaseAdmin()`       | Uses `SUPABASE_SECRET_KEY` for user management                    |
-| Evaluate pronunciation | `pronunciation.ts`                               | Returns score=-1 + `systemError` on AI failure                    |
-| Detect tone errors     | `tones.ts`                                       | Chinese only, graceful fallback                                   |
-| Generate lesson        | `lessons.ts`                                     | Prompt includes i+1 ratio, time allocation, TPR rules             |
-| Check progression      | `progression.ts`                                 | Thresholds per CEFR level                                         |
-| Analyze conversation   | `analysis.ts`                                    | Updates SM-2 + modality scores + contextual usage                 |
-| SM-2 review            | `srs.ts`                                         | Pure function, no DB. listening=3, speaking=4, contextual=5       |
-| Build tutor prompt     | `prompts/tutor.ts`                               | DB-backed translated prompt sections with placeholder rendering   |
-| Base tutor template    | `prompts/base-template.ts`                       | Canonical English template translated for new lesson languages    |
-| Translate tutor prompt | `prompts/translate-prompt.ts`                    | GPT-4o translation preserving placeholders + language labels      |
-| Test language pair     | `language-tester.ts`                             | TTS -> STT -> evaluation round-trip with viability recommendation |
-| Track AI cost          | `cost-tracker.ts`                                | `trackUsage()` with per-model pricing for all 6 models            |
-| DB queries             | `data/*.ts`                                      | 10 modules, includes `data/model-routing.ts` and tutor prompts    |
-| Cache TTS              | `redis.ts`                                       | 7-day TTL, SHA-256 key                                            |
-| File type detection    | `ai.ts`                                          | Uses `magic-bytes.js`, not hand-rolled                            |
+| Task                       | File                                             | Notes                                                             |
+| -------------------------- | ------------------------------------------------ | ----------------------------------------------------------------- |
+| Get AI service             | `ai-service/index.ts` → `getAIService()`         | Returns LocalAIService or QueueAIService based on AI_MODE env     |
+| Call LLM                   | `ai.ts` → `chat()`, `chatJSON()`, `chatStream()` | Throws `AIError` on failure. Pass `onUsage` for cost tracking     |
+| Route model                | `ai.ts` → `routeModel(task, lang)`               | DB-backed cache (`model_routing`) with hardcoded zh/te fallback   |
+| Transcribe audio           | `ai.ts` → `transcribe(file, lang)`               | Pass original `File` from formData, never Buffer→File             |
+| Generate speech            | `ai.ts` → `synthesize(text, instructions?)`      | Returns `Buffer`, cache via `redis.ts`                            |
+| Pre-generate TTS CDN audio | `tts-storage.ts`                                 | Dedupes by hash and uploads public MP3 to Supabase Storage        |
+| Supabase admin client      | `supabase-admin.ts` → `getSupabaseAdmin()`       | Uses `SUPABASE_SECRET_KEY` for user management                    |
+| Evaluate pronunciation     | `pronunciation.ts`                               | Returns score=-1 + `systemError` on AI failure                    |
+| Detect tone errors         | `tones.ts`                                       | Chinese only, graceful fallback                                   |
+| Generate lesson            | `lessons.ts`                                     | Prompt includes i+1 ratio, time allocation, TPR rules             |
+| Check progression          | `progression.ts`                                 | Thresholds per CEFR level                                         |
+| Analyze conversation       | `analysis.ts`                                    | Updates SM-2 + modality scores + contextual usage                 |
+| SM-2 review                | `srs.ts`                                         | Pure function, no DB. listening=3, speaking=4, contextual=5       |
+| Build tutor prompt         | `prompts/tutor.ts`                               | DB-backed translated prompt sections with placeholder rendering   |
+| Base tutor template        | `prompts/base-template.ts`                       | Canonical English template translated for new lesson languages    |
+| Translate tutor prompt     | `prompts/translate-prompt.ts`                    | GPT-4o translation preserving placeholders + language labels      |
+| Test language pair         | `language-tester.ts`                             | TTS -> STT -> evaluation round-trip with viability recommendation |
+| Track AI cost              | `cost-tracker.ts`                                | `trackUsage()` with per-model pricing for all 6 models            |
+| DB queries                 | `data/*.ts`                                      | 11 modules, see `data/AGENTS.md` for full API reference           |
+| Cache TTS                  | `redis.ts`                                       | 7-day TTL, SHA-256 key                                            |
+| File type detection        | `ai.ts`                                          | Uses `magic-bytes.js`, not hand-rolled                            |
 
 ## SCHEMA (11 tables — defined in packages/ai-core/src/schema.ts)
 

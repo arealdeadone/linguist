@@ -13,13 +13,13 @@ linguist/
 │   │   ├── components/    # 15 Svelte 5 components
 │   │   ├── server/        # Backend: AI service, SRS, pronunciation, DB, Redis, cost tracking
 │   │   │   ├── ai-service/ # AIService interface + LocalAIService + QueueAIService
-│   │   │   ├── data/      # Drizzle ORM queries (10 modules, barrel export)
+│   │   │   ├── data/      # Drizzle ORM queries (11 modules, barrel export)
 │   │   │   └── prompts/   # AI tutor system prompts (Hindi/Thai)
 │   │   ├── stores/        # 6 Svelte 5 rune stores (.svelte.ts)
 │   │   ├── types/         # TypeScript types (barrel export)
 │   │   ├── data/          # Static data (30+ conversation scenarios)
 │   │   └── offline/       # PWA precaching
-│   ├── routes/            # 13 pages + 27 API endpoints + admin console
+│   ├── routes/            # 12 pages + 28 API endpoints + admin console
 │   ├── hooks.server.ts    # Supabase Auth session + route protection + /admin guard
 │   └── service-worker.ts  # Cache strategies (network-first for data, cache-first for static)
 ├── packages/ai-core/      # Shared monorepo package (schema, constants, types)
@@ -38,18 +38,20 @@ linguist/
 
 ## WHERE TO LOOK
 
-| Task              | Location                                                     | Notes                                                                                     |
-| ----------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| Add new page      | `src/routes/{name}/+page.svelte` + `+page.server.ts`         | Add `depends('data:learner')` to server load                                              |
-| Add API endpoint  | `src/routes/api/{name}/+server.ts`                           | Export GET/POST/PATCH, wrap in try/catch, return `json({ error }, { status })` on failure |
-| Add component     | `src/lib/components/{Name}.svelte`                           | Svelte 5 runes only, see components/AGENTS.md                                             |
-| Add AI feature    | `src/lib/server/ai-service/`                                 | Use `getAIService()` factory, pass `onUsage` for cost tracking                            |
-| Add TTS pre-generation | `src/lib/server/tts-storage.ts`                          | Dedup + upload public audio to Supabase Storage bucket `tts-audio`                        |
-| Add DB table      | `packages/ai-core/src/schema.ts` → `src/lib/server/data/{name}.ts` | Schema lives in shared package, run migration after                                 |
-| Add store         | `src/lib/stores/{name}.svelte.ts`                            | Must use `.svelte.ts` extension for runes                                                 |
-| Add test          | Colocate as `*.test.ts`                                      | BDD in `bdd.integration.test.ts`, regression in `regression.integration.test.ts`          |
-| Add admin feature | `src/routes/(admin)/admin/`                                  | Protected by Supabase auth guard, dark theme layout                                       |
-| Deploy            | `npm run k8s:deploy`                                         | First time: `npm run k8s:deploy:seed`                                                     |
+| Task                   | Location                                                           | Notes                                                                                     |
+| ---------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Add new page           | `src/routes/{name}/+page.svelte` + `+page.server.ts`               | Add `depends('data:learner')` to server load                                              |
+| Add API endpoint       | `src/routes/api/{name}/+server.ts`                                 | Export GET/POST/PATCH, wrap in try/catch, return `json({ error }, { status })` on failure |
+| Add component          | `src/lib/components/{Name}.svelte`                                 | Svelte 5 runes only, see components/AGENTS.md                                             |
+| Add AI feature         | `src/lib/server/ai-service/`                                       | Use `getAIService()` factory, pass `onUsage` for cost tracking                            |
+| Add TTS pre-generation | `src/lib/server/tts-storage.ts`                                    | Dedup + upload public audio to Supabase Storage bucket `tts-audio`                        |
+| Add DB table           | `packages/ai-core/src/schema.ts` → `src/lib/server/data/{name}.ts` | Schema lives in shared package, run migration after                                       |
+| Add store              | `src/lib/stores/{name}.svelte.ts`                                  | Must use `.svelte.ts` extension for runes                                                 |
+| Add test               | Colocate as `*.test.ts`                                            | BDD in `bdd.integration.test.ts`, regression in `regression.integration.test.ts`          |
+| Add admin feature      | `src/routes/(admin)/admin/`                                        | Protected by Supabase auth guard, dark theme layout                                       |
+| Add data module        | `src/lib/server/data/{name}.ts` → re-export in `data/index.ts`     | See `data/AGENTS.md` for all modules and patterns                                         |
+| Add worker job         | `worker/src/processor.ts` + `local-ai-service.ts`                  | See `worker/AGENTS.md` for job types and flow                                             |
+| Deploy                 | `npm run k8s:deploy`                                               | First time: `npm run k8s:deploy:seed`                                                     |
 
 ## CONVENTIONS
 
@@ -85,7 +87,7 @@ linguist/
 - Modifying `db.ts` without verifying Vercel serverless compatibility — NEVER. Any change to `db.ts` must preserve: (1) lazy connection via Proxy, (2) `prepare: false` for Supabase pooler, (3) `ssl: 'require'` for Supabase, (4) `connect_timeout: 30`, (5) `max: 1` for serverless
 - Modifying `svelte.config.js` adapter `maxDuration` below 60 — NEVER. Supabase pooler cold-start + SSL handshake needs this headroom
 - Creating new DB/Redis/external service clients at module scope — NEVER on Vercel. All external connections must be lazy-initialized (created on first use, not on import). Module-scope initialization runs during cold start and competes with Vercel's function timeout
-- `db.execute(sql\`...\`)` with parameters on Vercel — NEVER. Drizzle's `execute()` with parameterized tagged template literals fails when `prepare: false` (required for Supabase pooler). Use Drizzle query builder (`db.select()`, `db.update()`, etc.) instead. Parameter-free queries like `SELECT 1` are safe. The `claimNextJob` CTE in ai-jobs.ts is an exception (worker-only, not on Vercel)
+- `db.execute(sql\`...\`)`with parameters on Vercel — NEVER. Drizzle's`execute()`with parameterized tagged template literals fails when`prepare: false` (required for Supabase pooler). Use Drizzle query builder (`db.select()`, `db.update()`, etc.) instead. Parameter-free queries like `SELECT 1`are safe. The`claimNextJob` CTE in ai-jobs.ts is an exception (worker-only, not on Vercel)
 
 ## ZERO TOLERANCE: NO SILENT FAILURES (ABSOLUTE RULE)
 
