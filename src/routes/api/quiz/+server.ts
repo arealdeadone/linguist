@@ -3,18 +3,22 @@ import type { RequestHandler } from './$types';
 import { getAIService } from '$lib/server/ai-service';
 import type { CefrLevel } from '$lib/types/lesson';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
+		const learnerId = locals.learnerId;
+		if (!learnerId) {
+			return json({ error: 'Not authenticated' }, { status: 401 });
+		}
+
 		const body = await request.json();
-		const { learnerId, lessonId, quizType, cefrLevel } = body as {
-			learnerId?: string;
+		const { lessonId, quizType, cefrLevel } = body as {
 			lessonId?: string;
 			quizType?: 'multiple_choice' | 'fill_in_blank' | 'matching';
 			cefrLevel?: CefrLevel;
 		};
 
-		if (!learnerId || !quizType) {
-			return json({ error: 'learnerId and quizType required' }, { status: 400 });
+		if (!quizType) {
+			return json({ error: 'quizType required' }, { status: 400 });
 		}
 
 		const result = await getAIService().generateQuiz({

@@ -5,19 +5,20 @@ import { upsertVocab } from '$lib/server/data/vocabulary';
 import { getLearnerById } from '$lib/server/data/learners';
 import { getAIService } from '$lib/server/ai-service';
 
-export const GET: RequestHandler = async ({ url }) => {
-	const learnerId = url.searchParams.get('learnerId');
-	if (!learnerId) return json({ error: 'learnerId required' }, { status: 400 });
+export const GET: RequestHandler = async ({ locals }) => {
+	const learnerId = locals.learnerId;
+	if (!learnerId) return json({ error: 'Not authenticated' }, { status: 401 });
 
 	const lessons = await getLessonsByLearnerId(learnerId);
 	return json(lessons);
 };
 
-export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	const { learnerId, week, day, theme } = body;
+export const POST: RequestHandler = async ({ request, locals }) => {
+	const learnerId = locals.learnerId;
+	if (!learnerId) return json({ error: 'Not authenticated' }, { status: 401 });
 
-	if (!learnerId) return json({ error: 'learnerId required' }, { status: 400 });
+	const body = await request.json();
+	const { week, day, theme } = body;
 
 	const learner = await getLearnerById(learnerId);
 	if (!learner) return json({ error: 'Learner not found' }, { status: 404 });

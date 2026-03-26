@@ -10,15 +10,15 @@ interface QuizAnswer {
 	correct?: boolean;
 }
 
-export const POST: RequestHandler = async ({ request }) => {
-	const body = await request.json();
-	const { learnerId, lessonId, quizType, questions, answers, score } = body;
+export const POST: RequestHandler = async ({ request, locals }) => {
+	const learnerId = locals.learnerId;
+	if (!learnerId) return json({ error: 'Not authenticated' }, { status: 401 });
 
-	if (!learnerId || !quizType || !questions || !answers) {
-		return json(
-			{ error: 'learnerId, quizType, questions, and answers required' },
-			{ status: 400 }
-		);
+	const body = await request.json();
+	const { lessonId, quizType, questions, answers, score } = body;
+
+	if (!quizType || !questions || !answers) {
+		return json({ error: 'quizType, questions, and answers required' }, { status: 400 });
 	}
 
 	const vocab = await getVocabByLearnerId(learnerId);

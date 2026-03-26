@@ -5,12 +5,11 @@ import { getAIService } from '$lib/server/ai-service';
 interface ChatRequestBody {
 	conversationId?: string;
 	message?: string;
-	learnerId?: string;
 	scenario?: string;
 }
 
 function getStatusForChatError(message: string): number {
-	if (message === 'learnerId and message required' || message === 'Learner language profile invalid') {
+	if (message === 'message required' || message === 'Learner language profile invalid') {
 		return 400;
 	}
 
@@ -33,16 +32,20 @@ function getStatusForChatError(message: string): number {
 	return 500;
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
 	try {
+		const learnerId = locals.learnerId;
+		if (!learnerId) {
+			return json({ error: 'Not authenticated' }, { status: 401 });
+		}
+
 		const body = (await request.json()) as ChatRequestBody;
-		const learnerId = body.learnerId?.trim();
 		const message = body.message?.trim();
 		const conversationId = body.conversationId?.trim();
 		const scenario = body.scenario?.trim();
 
-		if (!learnerId || !message) {
-			return json({ error: 'learnerId and message required' }, { status: 400 });
+		if (!message) {
+			return json({ error: 'message required' }, { status: 400 });
 		}
 
 		const result = await getAIService().chat({ learnerId, message, conversationId, scenario });

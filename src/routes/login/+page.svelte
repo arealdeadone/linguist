@@ -16,8 +16,8 @@
 		class="w-full max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8 shadow-2xl shadow-black/30"
 	>
 		<div>
-			<h1 class="text-2xl font-bold text-white">Admin Login</h1>
-			<p class="mt-2 text-sm text-gray-400">Sign in with your Supabase admin account.</p>
+			<h1 class="text-2xl font-bold text-white">Login</h1>
+			<p class="mt-2 text-sm text-gray-400">Sign in with your Supabase account.</p>
 		</div>
 
 		<form method="POST" action="?/login" class="mt-6 space-y-4">
@@ -35,7 +35,7 @@
 					autocomplete="email"
 					required
 					class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-					placeholder="admin@example.com"
+					placeholder="you@example.com"
 				/>
 			</div>
 

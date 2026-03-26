@@ -1,4 +1,4 @@
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { learners } from '../schema';
 
@@ -7,6 +7,7 @@ export async function getAllLearners() {
 		.select({
 			id: learners.id,
 			name: learners.name,
+			supabaseUserId: learners.supabaseUserId,
 			targetLanguage: learners.targetLanguage,
 			lessonLanguage: learners.lessonLanguage,
 			cefrLevel: learners.cefrLevel,
@@ -20,23 +21,18 @@ export async function getLearnerById(id: string) {
 	return rows[0] ?? null;
 }
 
-export async function getLearnerByPin(pin: string) {
-	const rows = await db.select().from(learners).where(eq(learners.pin, pin)).limit(1);
-	return rows[0] ?? null;
-}
-
-export async function getLearnerByNameAndPin(name: string, pin: string) {
+export async function getLearnerBySupabaseUserId(supabaseUserId: string) {
 	const rows = await db
 		.select()
 		.from(learners)
-		.where(and(eq(learners.name, name), eq(learners.pin, pin)))
+		.where(eq(learners.supabaseUserId, supabaseUserId))
 		.limit(1);
 	return rows[0] ?? null;
 }
 
 export async function createLearner(data: {
 	name: string;
-	pin?: string;
+	supabaseUserId?: string;
 	targetLanguage: string;
 	lessonLanguage: string;
 }) {
@@ -48,7 +44,7 @@ export async function updateLearner(
 	id: string,
 	data: Partial<{
 		name: string;
-		pin: string;
+		supabaseUserId: string;
 		cefrLevel: string;
 		lessonLanguage: string;
 		preferences: Record<string, unknown>;

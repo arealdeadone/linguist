@@ -22,11 +22,11 @@ export function isLearnerActive(): boolean {
 	return activeLearner !== null;
 }
 
-export async function loadLearner(id: string): Promise<void> {
-	const res = await fetch(`/api/profile/${id}`);
+export async function loadLearner(): Promise<void> {
+	const res = await fetch('/api/profile');
 
 	if (!res.ok) {
-		return;
+		throw new Error('Failed to load learner profile');
 	}
 
 	const data = (await res.json()) as LearnerProfile;

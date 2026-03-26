@@ -9,16 +9,19 @@ interface EvaluateSpeechRequest {
 	expected?: string;
 	language?: string;
 	lessonLanguage?: string;
-	learnerId?: string;
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	const learnerId = locals.learnerId;
+	if (!learnerId) {
+		return json({ error: 'Not authenticated' }, { status: 401 });
+	}
+
 	const body = (await request.json()) as EvaluateSpeechRequest;
 	const transcript = body.transcript?.trim();
 	const expected = body.expected?.trim();
 	const language = body.language;
 	const lessonLanguage = body.lessonLanguage?.trim();
-	const learnerId = body.learnerId?.trim();
 
 	if (!transcript || !expected || !language || !lessonLanguage) {
 		return json(

@@ -5,8 +5,9 @@
 	let { data } = $props();
 
 	let showAddForm = $state(false);
+	let addEmail = $state('');
 	let addName = $state('');
-	let addPin = $state('');
+	let addPassword = $state('');
 	let addTarget = $state('');
 	let addLesson = $state('');
 	let isSubmitting = $state(false);
@@ -15,16 +16,27 @@
 
 	const cefrOptions = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 
+	$effect(() => {
+		if (!showAddForm) return;
+		if (!addTarget && langOptions.length > 0) {
+			addTarget = langOptions[0].value;
+		}
+		if (!addLesson && langOptions.length > 0) {
+			addLesson = langOptions[0].value;
+		}
+	});
+
 	async function addUser() {
-		if (!addName.trim()) return;
+		if (!addEmail.trim() || !addName.trim() || !addPassword.trim()) return;
 		isSubmitting = true;
 		try {
 			const res = await fetch('/admin/api/users', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
+					email: addEmail.trim(),
 					name: addName.trim(),
-					pin: addPin.trim() || undefined,
+					password: addPassword,
 					targetLanguage: addTarget,
 					lessonLanguage: addLesson
 				})
@@ -34,8 +46,9 @@
 				showToast(`Failed: ${err.error ?? 'Unknown error'}`, 'error');
 				return;
 			}
+			addEmail = '';
 			addName = '';
-			addPin = '';
+			addPassword = '';
 			showAddForm = false;
 			await invalidateAll();
 			showToast('Learner created.', 'success');
@@ -120,7 +133,17 @@
 	{#if showAddForm}
 		<div class="rounded-xl border border-gray-800 bg-gray-900 p-5">
 			<h3 class="mb-4 text-sm font-semibold text-white">New Learner</h3>
-			<div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+			<div class="grid grid-cols-1 gap-4 lg:grid-cols-5">
+				<div>
+					<label for="add-email" class="mb-1 block text-xs text-gray-400">Email</label>
+					<input
+						id="add-email"
+						type="email"
+						bind:value={addEmail}
+						placeholder="learner@example.com"
+						class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+					/>
+				</div>
 				<div>
 					<label for="add-name" class="mb-1 block text-xs text-gray-400">Name</label>
 					<input
@@ -132,13 +155,12 @@
 					/>
 				</div>
 				<div>
-					<label for="add-pin" class="mb-1 block text-xs text-gray-400">PIN (optional)</label>
+					<label for="add-password" class="mb-1 block text-xs text-gray-400">Password</label>
 					<input
-						id="add-pin"
-						type="text"
-						bind:value={addPin}
-						placeholder="4-digit PIN"
-						maxlength={4}
+						id="add-password"
+						type="password"
+						bind:value={addPassword}
+						placeholder="At least 6 characters"
 						class="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
 					/>
 				</div>
@@ -170,7 +192,7 @@
 			<div class="mt-4 flex justify-end">
 				<button
 					onclick={addUser}
-					disabled={!addName.trim() || isSubmitting}
+					disabled={!addEmail.trim() || !addName.trim() || !addPassword.trim() || isSubmitting}
 					class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
 				>
 					{isSubmitting ? 'Creating...' : 'Create Learner'}
@@ -184,7 +206,7 @@
 			<thead>
 				<tr class="border-b border-gray-800 text-xs uppercase tracking-wide text-gray-500">
 					<th class="px-4 py-3">Name</th>
-					<th class="px-4 py-3">PIN</th>
+					<th class="px-4 py-3">Email Linked</th>
 					<th class="px-4 py-3">Target</th>
 					<th class="px-4 py-3">Lesson</th>
 					<th class="px-4 py-3">CEFR</th>
@@ -197,7 +219,9 @@
 				{#each data.users as user (user.id)}
 					<tr class="transition-colors hover:bg-gray-800/50">
 						<td class="px-4 py-3 font-medium text-white">{user.name}</td>
-						<td class="px-4 py-3 font-mono text-gray-400">—</td>
+						<td class="px-4 py-3 font-mono text-gray-400">
+							{user.supabaseUserId ? 'Yes' : 'No'}
+						</td>
 						<td class="px-4 py-3 text-gray-300">{user.targetLanguage}</td>
 						<td class="px-4 py-3 text-gray-300">{user.lessonLanguage}</td>
 						<td class="px-4 py-3">

@@ -7,4 +7,6 @@ resources:
   - redis.yaml
   - app.yaml
   - worker-deployment.yaml
+  - worker-secrets.yaml
+  - secrets.yaml
   - ingress.yaml

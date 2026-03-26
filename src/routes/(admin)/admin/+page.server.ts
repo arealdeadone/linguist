@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { getTotalCost, getCostByPeriod, getCostByTask } from '$lib/server/data/ai-usage';
+import { getCostByPeriod, getCostByTask, getTotalCost } from '$lib/server/data/ai-usage';
 import { getAllLearners } from '$lib/server/data/learners';
 import { db } from '$lib/server/db';
 import { aiUsageLogs, lessons, conversations } from '$lib/server/schema';
@@ -9,39 +9,24 @@ export const load: PageServerLoad = async () => {
 	const startOfToday = new Date();
 	startOfToday.setHours(0, 0, 0, 0);
 
-	const [
-		totalCost,
-		costToday,
-		callCountRows,
-		tokenRows,
-		dailyCosts,
-		weeklyCosts,
-		monthlyCosts,
-		taskCosts,
-		learners,
-		lessonCountRows,
-		conversationCountRows
-	] = await Promise.all([
-		getTotalCost(),
-		getTotalCost(startOfToday),
-		db.select({ count: sql<number>`count(*)::int` }).from(aiUsageLogs),
-		db
-			.select({
-				input: sql<number>`coalesce(sum(input_tokens), 0)::int`,
-				output: sql<number>`coalesce(sum(output_tokens), 0)::int`
-			})
-			.from(aiUsageLogs),
-		getCostByPeriod('day', 30),
-		getCostByPeriod('week', 12),
-		getCostByPeriod('month', 6),
-		getCostByTask(),
-		getAllLearners(),
-		db.select({ count: sql<number>`count(*)::int` }).from(lessons),
-		db.select({ count: sql<number>`count(*)::int` }).from(conversations)
-	]);
-
-	const totalCalls = callCountRows[0].count;
-	const totalTokens = tokenRows[0].input + tokenRows[0].output;
+	const [totalCost, costToday, statsRows, dailyCosts, weeklyCosts, monthlyCosts, taskCosts, learners, lessonCountRows, conversationCountRows] =
+		await Promise.all([
+			getTotalCost(),
+			getTotalCost(startOfToday),
+			db
+				.select({
+					totalCalls: sql<number>`count(*)::int`,
+					totalTokens: sql<number>`coalesce(sum(${aiUsageLogs.inputTokens}) + sum(${aiUsageLogs.outputTokens}), 0)::int`
+				})
+				.from(aiUsageLogs),
+			getCostByPeriod('day', 30),
+			getCostByPeriod('week', 12),
+			getCostByPeriod('month', 6),
+			getCostByTask(),
+			getAllLearners(),
+			db.select({ count: sql<number>`count(*)::int` }).from(lessons),
+			db.select({ count: sql<number>`count(*)::int` }).from(conversations)
+		]);
 
 	const langPairs = new Map<string, number>();
 	for (const l of learners) {
@@ -51,12 +36,12 @@ export const load: PageServerLoad = async () => {
 
 	return {
 		stats: {
-			totalCalls,
-			totalTokens,
+			totalCalls: statsRows[0]?.totalCalls ?? 0,
+			totalTokens: statsRows[0]?.totalTokens ?? 0,
 			totalCost,
 			costToday,
-			totalLessons: lessonCountRows[0].count,
-			totalConversations: conversationCountRows[0].count
+			totalLessons: lessonCountRows[0]?.count ?? 0,
+			totalConversations: conversationCountRows[0]?.count ?? 0
 		},
 		dailyCosts,
 		weeklyCosts,

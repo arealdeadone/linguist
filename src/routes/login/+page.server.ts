@@ -24,7 +24,7 @@ export const actions: Actions = {
 			return fail(400, { error: error.message, email: email.trim() });
 		}
 
-		throw redirect(303, '/admin');
+		throw redirect(303, '/');
 	},
 	logout: async ({ locals: { supabase } }) => {
 		await supabase.auth.signOut();

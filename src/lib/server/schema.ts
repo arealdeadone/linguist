@@ -15,7 +15,7 @@ import {
 export const learners = pgTable('learners', {
 	id: uuid('id').defaultRandom().primaryKey(),
 	name: text('name').notNull(),
-	pin: text('pin'),
+	supabaseUserId: text('supabase_user_id').unique(),
 	targetLanguage: text('target_language').notNull(),
 	lessonLanguage: text('lesson_language').notNull(),
 	cefrLevel: text('cefr_level').notNull().default('A1'),

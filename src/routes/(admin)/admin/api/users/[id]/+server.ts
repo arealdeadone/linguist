@@ -2,12 +2,25 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { learners } from '$lib/server/schema';
-import { updateLearner } from '$lib/server/data/learners';
+import { getLearnerById, updateLearner } from '$lib/server/data/learners';
 import { CEFR_LEVELS } from '$lib/constants';
+import { getSupabaseAdmin } from '$lib/server/supabase-admin';
 import { eq } from 'drizzle-orm';
 
 export const DELETE: RequestHandler = async ({ params }) => {
 	try {
+		const learner = await getLearnerById(params.id);
+		if (!learner) return json({ error: 'Not found' }, { status: 404 });
+
+		if (learner.supabaseUserId) {
+			const admin = getSupabaseAdmin();
+			const { error } = await admin.auth.admin.deleteUser(learner.supabaseUserId);
+			if (error) {
+				console.error('Failed to delete Supabase auth user:', error);
+				return json({ error: error.message }, { status: 500 });
+			}
+		}
+
 		const rows = await db.delete(learners).where(eq(learners.id, params.id)).returning();
 		if (rows.length === 0) return json({ error: 'Not found' }, { status: 404 });
 		return json({ ok: true, deleted: rows[0].name });

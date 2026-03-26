@@ -2,10 +2,15 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAIService } from '$lib/server/ai-service';
 
-export const POST: RequestHandler = async ({ request }) => {
-	const { conversationId, learnerId } = await request.json();
-	if (!conversationId || !learnerId) {
-		return json({ error: 'conversationId and learnerId required' }, { status: 400 });
+export const POST: RequestHandler = async ({ request, locals }) => {
+	const learnerId = locals.learnerId;
+	if (!learnerId) {
+		return json({ error: 'Not authenticated' }, { status: 401 });
+	}
+
+	const { conversationId } = await request.json();
+	if (!conversationId) {
+		return json({ error: 'conversationId required' }, { status: 400 });
 	}
 
 	try {

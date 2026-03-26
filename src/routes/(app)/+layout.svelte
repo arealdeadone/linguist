@@ -15,7 +15,7 @@
 
 	$effect(() => {
 		if (hasLoggedOut || !data.learnerId || activeLearner) return;
-		loadLearner(data.learnerId).catch(() => {
+		loadLearner().catch(() => {
 			showToast('Could not restore learner session. Please log in again.', 'error');
 		});
 	});
@@ -53,14 +53,19 @@
 		hasLoggedOut = true;
 		clearLearner();
 		try {
-			await fetch('/api/profile', {
+			const res = await fetch('/login?/logout', {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'logout' })
+				body: new FormData()
 			});
+			if (!res.ok) {
+				showToast('Could not sign out. Please try again.', 'error');
+				hasLoggedOut = false;
+				return;
+			}
 			await invalidateAll();
-			await goto('/');
-		} catch {
+			await goto('/login');
+		} catch (error) {
+			console.error('Could not switch profile:', error);
 			showToast('Could not switch profile. Please try again.', 'error');
 			hasLoggedOut = false;
 		}

@@ -1,38 +1,28 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getAllLearners, createLearner, getLearnerByNameAndPin } from '$lib/server/data/learners';
+import { getLearnerById, updateLearner } from '$lib/server/data/learners';
 
-export const GET: RequestHandler = async () => {
-	const learners = await getAllLearners();
-	return json(learners);
+export const GET: RequestHandler = async ({ locals }) => {
+	const learnerId = locals.learnerId;
+	if (!learnerId) return json({ error: 'Not authenticated' }, { status: 401 });
+
+	const learner = await getLearnerById(learnerId);
+	if (!learner) return json({ error: 'Learner not found' }, { status: 404 });
+
+	return json(learner);
 };
 
-export const POST: RequestHandler = async ({ request, url, cookies }) => {
-	const body = await request.json();
-	const secure = url.protocol === 'https:';
+export const PATCH: RequestHandler = async ({ request, locals }) => {
+	const learnerId = locals.learnerId;
+	if (!learnerId) return json({ error: 'Not authenticated' }, { status: 401 });
 
-	if (body.action === 'logout') {
-		cookies.delete('learner_id', { path: '/', secure });
-		return json({ ok: true });
+	const body = (await request.json()) as { preferences?: Record<string, unknown> };
+	if (!body.preferences || typeof body.preferences !== 'object') {
+		return json({ error: 'preferences required' }, { status: 400 });
 	}
 
-	if (body.pin && body.name && !body.targetLanguage) {
-		const learner = await getLearnerByNameAndPin(body.name, body.pin);
-		if (!learner) return json({ error: 'Invalid name or PIN' }, { status: 401 });
-		cookies.set('learner_id', learner.id, {
-			path: '/',
-			httpOnly: true,
-			sameSite: 'lax',
-			secure,
-			maxAge: 60 * 60 * 24 * 30
-		});
-		return json(learner);
-	}
+	const learner = await updateLearner(learnerId, { preferences: body.preferences });
+	if (!learner) return json({ error: 'Learner not found' }, { status: 404 });
 
-	if (!body.name || !body.targetLanguage || !body.lessonLanguage) {
-		return json({ error: 'name, targetLanguage, and lessonLanguage required' }, { status: 400 });
-	}
-
-	const learner = await createLearner(body);
-	return json(learner, { status: 201 });
+	return json(learner);
 };

@@ -8,23 +8,26 @@ interface CodeSwitchRequest {
 	message?: string;
 	targetLanguage?: string;
 	lessonLanguage?: string;
-	learnerId?: string;
 	conversationId?: string;
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	const learnerId = locals.learnerId;
+	if (!learnerId) {
+		return json({ error: 'Not authenticated' }, { status: 401 });
+	}
+
 	const body = (await request.json()) as CodeSwitchRequest;
 
 	const message = body.message?.trim();
 	const targetLanguage = body.targetLanguage?.trim();
 	const lessonLanguage = body.lessonLanguage?.trim();
-	const learnerId = body.learnerId?.trim();
 	const conversationId = body.conversationId?.trim();
 
-	if (!message || !targetLanguage || !lessonLanguage || !learnerId) {
+	if (!message || !targetLanguage || !lessonLanguage) {
 		return json(
 			{
-				error: 'message, targetLanguage, lessonLanguage, and learnerId are required'
+				error: 'message, targetLanguage, and lessonLanguage are required'
 			},
 			{ status: 400 }
 		);

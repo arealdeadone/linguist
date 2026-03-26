@@ -6,7 +6,11 @@ interface EndConversationBody {
 	conversationId?: string;
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	if (!locals.learnerId) {
+		return json({ error: 'Not authenticated' }, { status: 401 });
+	}
+
 	const body = (await request.json()) as EndConversationBody;
 	const conversationId = body.conversationId?.trim();
 

@@ -10,9 +10,9 @@ import {
 import { review, nextReviewDate } from '$lib/server/srs';
 import type { SM2Card, ReviewQuality } from '$lib/server/srs';
 
-export const GET: RequestHandler = async ({ url }) => {
-	const learnerId = url.searchParams.get('learnerId');
-	if (!learnerId) return json({ error: 'learnerId required' }, { status: 400 });
+export const GET: RequestHandler = async ({ url, locals }) => {
+	const learnerId = locals.learnerId;
+	if (!learnerId) return json({ error: 'Not authenticated' }, { status: 401 });
 
 	if (url.searchParams.get('all') === 'true') {
 		const allVocab = await getVocabByLearnerId(learnerId);
