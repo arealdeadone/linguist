@@ -3,10 +3,6 @@ kind: Kustomization
 namespace: linguist
 resources:
   - namespace.yaml
-  - postgres.yaml
-  - redis.yaml
-  - app.yaml
   - worker-deployment.yaml
   - worker-secrets.yaml
-  - secrets.yaml
   - ingress.yaml

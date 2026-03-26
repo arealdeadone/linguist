@@ -6,11 +6,13 @@ Backend services for AI, database, SRS, speech, cost tracking, and lesson genera
 
 | Task                   | File                                             | Notes                                                             |
 | ---------------------- | ------------------------------------------------ | ----------------------------------------------------------------- |
+| Get AI service         | `ai-service/index.ts` → `getAIService()`         | Returns LocalAIService or QueueAIService based on AI_MODE env     |
 | Call LLM               | `ai.ts` → `chat()`, `chatJSON()`, `chatStream()` | Throws `AIError` on failure. Pass `onUsage` for cost tracking     |
 | Route model            | `ai.ts` → `routeModel(task, lang)`               | DB-backed cache (`model_routing`) with hardcoded zh/te fallback   |
 | Transcribe audio       | `ai.ts` → `transcribe(file, lang)`               | Pass original `File` from formData, never Buffer→File             |
 | Generate speech        | `ai.ts` → `synthesize(text, instructions?)`      | Returns `Buffer`, cache via `redis.ts`                            |
 | Pre-generate TTS CDN audio | `tts-storage.ts`                            | Dedupes by hash and uploads public MP3 to Supabase Storage        |
+| Supabase admin client  | `supabase-admin.ts` → `getSupabaseAdmin()`       | Uses `SUPABASE_SECRET_KEY` for user management                    |
 | Evaluate pronunciation | `pronunciation.ts`                               | Returns score=-1 + `systemError` on AI failure                    |
 | Detect tone errors     | `tones.ts`                                       | Chinese only, graceful fallback                                   |
 | Generate lesson        | `lessons.ts`                                     | Prompt includes i+1 ratio, time allocation, TPR rules             |
@@ -26,7 +28,7 @@ Backend services for AI, database, SRS, speech, cost tracking, and lesson genera
 | Cache TTS              | `redis.ts`                                       | 7-day TTL, SHA-256 key                                            |
 | File type detection    | `ai.ts`                                          | Uses `magic-bytes.js`, not hand-rolled                            |
 
-## SCHEMA (9 tables)
+## SCHEMA (11 tables — defined in packages/ai-core/src/schema.ts)
 
 `learners` → `vocabulary` (1:many), `lessons` (1:many), `conversations` (1:many)
 `conversations` → `code_switches` (1:many)
@@ -34,6 +36,10 @@ Backend services for AI, database, SRS, speech, cost tracking, and lesson genera
 `ai_usage_logs` ← `learners` (optional FK, for cost tracking)
 `tutor_prompts` stores translated tutor prompt sections per lesson language
 `model_routing` stores per-language model routing by AI task
+`ai_jobs` queue table for async AI processing (worker polls this)
+`languages` lookup table for supported language codes/names
+
+Schema is defined ONCE in `packages/ai-core/src/schema.ts`. Both app (`src/lib/server/schema.ts`) and worker (`worker/src/schema.ts`) re-export from `@linguist/ai-core/schema`. NEVER define tables locally.
 
 ## CRITICAL RULES
 

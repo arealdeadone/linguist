@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-SvelteKit 5 PWA teaching Chinese Mandarin (in Hindi) and Telugu (in Thai) via AI-powered lessons, conversation practice, and spaced repetition. All AI through AI Gateway. Self-hosted on OrbStack K8s with plain HTTP LAN access.
+SvelteKit 5 PWA teaching Chinese Mandarin (in Hindi) and Telugu (in Thai) via AI-powered lessons, conversation practice, and spaced repetition. All AI through AI Gateway. Split architecture: Vercel (app) + local OrbStack K8s (AI worker).
 
 ## STRUCTURE
 
@@ -11,22 +11,28 @@ linguist/
 ├── src/
 │   ├── lib/
 │   │   ├── components/    # 15 Svelte 5 components
-│   │   ├── server/        # Backend: AI, SRS, pronunciation, DB, Redis, cost tracking
-│   │   │   ├── data/      # Drizzle ORM queries (9 modules, barrel export)
+│   │   ├── server/        # Backend: AI service, SRS, pronunciation, DB, Redis, cost tracking
+│   │   │   ├── ai-service/ # AIService interface + LocalAIService + QueueAIService
+│   │   │   ├── data/      # Drizzle ORM queries (10 modules, barrel export)
 │   │   │   └── prompts/   # AI tutor system prompts (Hindi/Thai)
 │   │   ├── stores/        # 6 Svelte 5 rune stores (.svelte.ts)
 │   │   ├── types/         # TypeScript types (barrel export)
 │   │   ├── data/          # Static data (30+ conversation scenarios)
 │   │   └── offline/       # PWA precaching
 │   ├── routes/            # 13 pages + 27 API endpoints + admin console
-│   ├── hooks.server.ts    # Supabase SSR session + /admin guard via ADMIN_SUPABASE_USER_ID
+│   ├── hooks.server.ts    # Supabase Auth session + route protection + /admin guard
 │   └── service-worker.ts  # Cache strategies (network-first for data, cache-first for static)
-├── k8s/                   # Kustomize manifests (8 files, PVC for persistent postgres)
+├── packages/ai-core/      # Shared monorepo package (schema, constants, types)
+├── worker/                # Standalone AI job processor (polls ai_jobs from Supabase)
+├── k8s/                   # Kustomize manifests (worker deployment)
+├── drizzle/               # SQL migration files
 ├── scripts/
 │   ├── deploy.sh          # Full K8s deploy (build → migrate → deploy)
-│   └── seed.ts            # DB seed (2 learners, 40 vocab, 2 lessons)
+│   ├── seed.ts            # DB seed (2 learners, 40 vocab, 2 lessons)
+│   └── backfill-tts.ts    # Retroactive TTS audio generation for existing vocab
 ├── docs/research/         # Pedagogy research (ground truth for behavior)
-├── Dockerfile             # 3-stage node:22-alpine
+├── Dockerfile             # 3-stage node:22-alpine (main app)
+├── worker/Dockerfile      # Worker container
 └── docker-compose.yaml    # PostgreSQL 17 + Redis 7 (local dev)
 ```
 
@@ -37,9 +43,9 @@ linguist/
 | Add new page      | `src/routes/{name}/+page.svelte` + `+page.server.ts`         | Add `depends('data:learner')` to server load                                              |
 | Add API endpoint  | `src/routes/api/{name}/+server.ts`                           | Export GET/POST/PATCH, wrap in try/catch, return `json({ error }, { status })` on failure |
 | Add component     | `src/lib/components/{Name}.svelte`                           | Svelte 5 runes only, see components/AGENTS.md                                             |
-| Add AI feature    | `src/lib/server/`                                            | Use `chatJSON()`/`chatStream()`, pass `onUsage` for cost tracking                         |
+| Add AI feature    | `src/lib/server/ai-service/`                                 | Use `getAIService()` factory, pass `onUsage` for cost tracking                            |
 | Add TTS pre-generation | `src/lib/server/tts-storage.ts`                          | Dedup + upload public audio to Supabase Storage bucket `tts-audio`                        |
-| Add DB table      | `src/lib/server/schema.ts` → `src/lib/server/data/{name}.ts` | Run `npm run db:push` after                                                               |
+| Add DB table      | `packages/ai-core/src/schema.ts` → `src/lib/server/data/{name}.ts` | Schema lives in shared package, run migration after                                 |
 | Add store         | `src/lib/stores/{name}.svelte.ts`                            | Must use `.svelte.ts` extension for runes                                                 |
 | Add test          | Colocate as `*.test.ts`                                      | BDD in `bdd.integration.test.ts`, regression in `regression.integration.test.ts`          |
 | Add admin feature | `src/routes/(admin)/admin/`                                  | Protected by Supabase auth guard, dark theme layout                                       |
@@ -66,11 +72,12 @@ linguist/
 - `return {} as T` — NEVER return empty object as typed result. Throw `AIError` instead
 - AI-generated lesson content in wrong language — NEVER. All learner-facing AI output (lesson explanations, feedback, cultural notes, quiz prompts, scene descriptions, error corrections) must be in the learner's configured `lessonLanguage`. If the learner's lesson language is Hindi, output Hindi. If it's English, output English. The `lessonLanguage` field on the learner profile is the single source of truth — never hardcode a language assumption
 - Red X marks in quiz feedback — violates affective filter (use amber 💡)
-- `document.cookie` for learnerId — NEVER (httpOnly cookie, pass from server load)
+- `document.cookie` for learnerId — NEVER (learnerId derived from Supabase session in hooks.server.ts)
 - `response_format: { type: 'json_object' }` with Claude — doesn't work reliably via gateway
 - Looking up review words in `vocabulary_targets` — NEVER. Look up from `allVocab` (full learner vocabulary)
 - Fetching vocab from API inside components — NEVER. Pass `allVocab` from server load as a prop
-- Validating password/PIN uniqueness — NEVER. PINs are secrets. Telling a user "this PIN exists" leaks credential information. Auth must use identity (name) + secret (PIN), never secret alone
+- PIN-based auth or password/PIN uniqueness checks — NEVER. Auth is Supabase email/password only
+- Defining schema tables in app or worker directly — NEVER. Schema lives in `packages/ai-core/src/schema.ts` only. App and worker re-export from `@linguist/ai-core/schema`
 - Empty string defaults for missing data (`?? ''`) — NEVER for required fields
 - Optional chaining (`?.`) as a lazy null guard — NEVER use to silently swallow what should be an error. Only permitted when the value is GENUINELY optional by design (e.g., optional function params, browser APIs, OpenAI SDK arrays). If the value SHOULD exist, access it directly and let the error surface
 - Hand-rolled code for common tasks — NEVER. Use battle-tested libraries (e.g., `magic-bytes.js` for file detection, `prom-client` for metrics)
@@ -117,8 +124,8 @@ npm run db:push            # Apply Drizzle schema
 npm run db:seed            # Seed (first time only — truncates data)
 npm run dev                # Dev server (localhost:5173)
 npm run check              # TypeScript + Svelte check
-npm run test -- --run      # All tests (126 unit + integration + BDD + regression)
-npm run build              # Production build (adapter-node)
+npm run test -- --run      # All tests (134 unit + integration + BDD + regression)
+npm run build              # Production build (adapter-vercel on Vercel, adapter-node locally)
 
 # Production (OrbStack K8s)
 npm run k8s:deploy         # Build + migrate + deploy (preserves data)
@@ -138,10 +145,13 @@ kubectl port-forward -n linguist svc/linguist-app --address 0.0.0.0 30000:3000 &
 
 ## DEPLOYMENT
 
-- **K8s**: OrbStack cluster, 3 pods (app, postgres StatefulSet with PVC, redis)
-- **LAN Access**: `http://{LAN_IP}:30000` — works on all devices, no setup needed
-- **Health check**: `GET /api/health` — checks PostgreSQL + Redis, returns 200/503
-- **Admin console**: `http://{LAN_IP}:30000/admin` (Supabase login at `/login`, restricted by `ADMIN_SUPABASE_USER_ID`)
+- **Vercel** (production): Main app deployed to Vercel free tier, auto-deploys on push
+- **Local K8s** (AI worker): OrbStack cluster, polls `ai_jobs` table from Supabase
+- **Supabase**: PostgreSQL (DB) + Auth (email/password + hCaptcha) + Storage (TTS audio CDN)
+- **Health check**: `GET /api/health` — checks PostgreSQL + optional Redis + ai_jobs queue depth
+- **Admin console**: `/admin` (Supabase login at `/login`, restricted by `ADMIN_SUPABASE_USER_ID`)
+- **AI_MODE**: `local` (direct AI calls) or `queue` (via ai_jobs table to worker)
+- **Env files**: `.env.local` (local dev, gitignored), `.env.vercel` (Vercel reference template)
 
 ## PEDAGOGY RULES (from docs/research/)
 
@@ -182,7 +192,7 @@ Every new feature requires:
 3. BDD behavioral test in `bdd.integration.test.ts` — must cover BOTH language pairs (zh/hi + te/th)
 4. Regression test in `regression.integration.test.ts` for any bug fix
 
-Test files: `srs.test.ts` (24), `cost-tracker.test.ts` (8), `api.integration.test.ts` (28), `bdd.integration.test.ts` (45), `regression.integration.test.ts` (29) = **134 total**
+Test files: `srs.test.ts` (24), `cost-tracker.test.ts` (8), `schema-drift.test.ts` (3), `api.integration.test.ts` (28), `bdd.integration.test.ts` (45), `regression.integration.test.ts` (29) = **134 total**
 
 ## SELF-UPDATE RULE
 

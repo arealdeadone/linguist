@@ -7,11 +7,11 @@
 | Component             | Props                                                                               | Role                                                                    |
 | --------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | LessonPlayer          | `plan, lessonId, learnerId, targetLanguage, lessonLanguage, allVocab, initialStep?` | Core lesson flow — all activity types inline including conversation     |
-| ConversationChat      | `learnerId, scenario?, targetLanguage, onSessionEnd?`                               | SSE streaming chat with mic input, TTS auto-play                        |
+| ConversationChat      | `learnerId, scenario?, targetLanguage, onSessionEnd?`                               | JSON chat (non-streaming) with mic input, TTS auto-play                 |
 | MultipleChoiceQuiz    | `questions, onComplete`                                                             | CEFR-adaptive: audio-first at A1, text at B1+                           |
 | FillInBlankQuiz       | `questions, onComplete`                                                             | Sentence completion quiz for B2+                                        |
 | SpeakingActivity      | `targetPhrase, romanization?, language, lessonLanguage, onComplete`                 | Record → STT → evaluate → feedback with system/user error distinction   |
-| AudioPlayer           | `text, language?, size?`                                                            | TTS playback. Has `e.stopPropagation()` — safe inside clickable parents |
+| AudioPlayer           | `text, language?, size?, audioUrl?`                                                 | TTS playback — uses CDN URL if `audioUrl` provided, falls back to API   |
 | AudioRecorder         | `onRecordingComplete, maxDurationMs?`                                               | MediaRecorder wrapper, auto-stop at max duration                        |
 | PronunciationFeedback | `evaluation`                                                                        | Score (green/yellow/amber), feedback in lesson language, tone errors    |
 | CharacterWriter       | `character, onComplete`                                                             | HanziWriter for Chinese stroke practice                                 |
