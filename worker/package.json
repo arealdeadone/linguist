@@ -15,11 +15,11 @@
 		"ioredis": "^5.10.1",
 		"magic-bytes.js": "^1.13.0",
 		"openai": "^6.32.0",
-		"postgres": "^3.4.8"
+		"postgres": "^3.4.8",
+		"tsx": "^4.21.0"
 	},
 	"devDependencies": {
 		"@types/node": "^22",
-		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
 	}
 }

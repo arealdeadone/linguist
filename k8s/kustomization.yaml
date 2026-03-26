@@ -4,6 +4,7 @@ namespace: linguist
 resources:
   - namespace.yaml
   - secrets.yaml
+  - worker-secrets.yaml
   - postgres.yaml
   - redis.yaml
   - app.yaml
