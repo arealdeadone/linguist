@@ -76,20 +76,33 @@
 				})
 			});
 
+			const text = await res.text();
+
 			if (!res.ok) {
-				const err = (await res.json()) as { error?: string };
-				showToast(err.error ?? 'Language test failed.', 'error');
+				let msg = 'Language test failed.';
+				try {
+					const err = JSON.parse(text) as { error?: string };
+					msg = err.error ?? msg;
+				} catch {
+					/* non-JSON error body */
+				}
+				showToast(msg, 'error');
 				return;
 			}
 
-			const result = (await res.json()) as LanguageTestSummary;
+			const result = JSON.parse(text) as LanguageTestSummary;
+			if (!result.results || !Array.isArray(result.results)) {
+				showToast('Unexpected response format.', 'error');
+				return;
+			}
 			summary = result;
 			liveResults = result.results;
 			totalSentences = result.results.length;
 			showToast('Language test complete.', 'success');
 		} catch (error) {
-			console.error('Language test request failed:', error);
-			showToast('Failed to run language test.', 'error');
+			const msg = error instanceof Error ? error.message : 'Unknown error';
+			console.error('Language test request failed:', msg);
+			showToast(`Failed to run language test: ${msg}`, 'error');
 		} finally {
 			isRunning = false;
 			statusMessage = '';
