@@ -26,6 +26,20 @@ describe('SM-2 Algorithm', () => {
 			expect(result.interval).toBeGreaterThan(6);
 		});
 
+		it('interval is capped at 365 days', () => {
+			const card: SM2Card = { repetition: 10, interval: 300, ef: 2.5 };
+			const result = review(card, 5);
+			expect(result.interval).toBeLessThanOrEqual(365);
+		});
+
+		it('repeated reviews never exceed 365-day cap', () => {
+			let card: SM2Card = { repetition: 2, interval: 6, ef: 2.6 };
+			for (let i = 0; i < 50; i++) {
+				card = review(card, 5);
+			}
+			expect(card.interval).toBeLessThanOrEqual(365);
+		});
+
 		it('failed review (quality < 3) resets repetition and interval', () => {
 			const card: SM2Card = { repetition: 5, interval: 90, ef: 2.5 };
 			const result = review(card, 2);

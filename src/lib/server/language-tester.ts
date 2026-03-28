@@ -34,7 +34,7 @@ const SUPPORTED_MODELS = new Set([
 	'claude-sonnet-4-6'
 ]);
 
-function getValidatedModelRouting(
+export function getValidatedModelRouting(
 	targetLanguage: string,
 	candidate: unknown
 ): Record<TaskType, string> {

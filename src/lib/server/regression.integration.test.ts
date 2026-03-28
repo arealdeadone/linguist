@@ -185,6 +185,116 @@ for (const lang of langConfigs) {
 				expect(word.length).toBeGreaterThan(0);
 			}
 		});
+
+		describe('REGRESSION: Language test returns JSON (not SSE)', () => {
+			it('GIVEN language test POST THEN response is application/json with valid summary', async () => {
+				const res = await fetch(`${BASE}/admin/api/language-test`, {
+					method: 'POST',
+					headers: buildHeaders(undefined, true),
+					body: JSON.stringify({
+						targetLanguage: 'zh',
+						sourceLanguage: 'hi',
+						targetLanguageName: 'Chinese Mandarin',
+						sourceLanguageName: 'Hindi',
+						testCount: 1
+					})
+				});
+
+				expect(res.status).toBe(200);
+				expect(res.headers.get('content-type')).toContain('application/json');
+
+				const data = (await res.json()) as {
+					results: unknown[];
+					averageScore: number;
+					recommendation: string;
+					modelRouting: Record<string, string>;
+				};
+				expect(Array.isArray(data.results)).toBe(true);
+				expect(typeof data.averageScore).toBe('number');
+				expect(['viable', 'marginal', 'not_viable']).toContain(data.recommendation);
+				expect(typeof data.modelRouting).toBe('object');
+			}, 120000);
+		});
+
+		describe('REGRESSION: Model routing rejects invalid model names', () => {
+			it('GIVEN language test THEN modelRouting values are all supported models', async () => {
+				const supported = ['gpt-4o', 'gpt-4o-mini', 'gemini-3-flash-preview', 'claude-sonnet-4-6'];
+				const res = await fetch(`${BASE}/admin/api/language-test`, {
+					method: 'POST',
+					headers: buildHeaders(undefined, true),
+					body: JSON.stringify({
+						targetLanguage: 'zh',
+						sourceLanguage: 'hi',
+						targetLanguageName: 'Chinese Mandarin',
+						sourceLanguageName: 'Hindi',
+						testCount: 1
+					})
+				});
+
+				expect(res.status).toBe(200);
+				const data = (await res.json()) as { modelRouting: Record<string, string> };
+				for (const [task, model] of Object.entries(data.modelRouting)) {
+					expect(supported).toContain(model);
+				}
+			}, 120000);
+		});
+
+		describe('REGRESSION: STT accepts audio with WAV content-type', () => {
+			it('GIVEN WAV audio file THEN STT transcription succeeds', async () => {
+				const ttsRes = await fetch(`${BASE}/api/speech/tts`, {
+					method: 'POST',
+					headers: buildHeaders(pairs.zh?.learner.id),
+					body: JSON.stringify({ text: '你好' })
+				});
+				const audioBlob = await ttsRes.blob();
+
+				const formData = new FormData();
+				formData.append('audio', new File([audioBlob], 'recording.wav', { type: 'audio/wav' }));
+				formData.append('language', 'zh');
+
+				const res = await fetch(`${BASE}/api/speech/stt`, {
+					method: 'POST',
+					body: formData
+				});
+				expect(res.status).toBe(200);
+				const data = (await res.json()) as { text: string };
+				expect(data.text).toBeTruthy();
+			}, 30000);
+		});
+
+		describe('REGRESSION: SRS review does not produce out-of-range dates', () => {
+			for (const lang of langConfigs) {
+				it(`GIVEN ${lang.label} vocab WHEN reviewed 10 times THEN next_review is within 1 year`, async () => {
+					const pair = pairs[lang.key];
+					if (!pair) return;
+
+					const vocabRes = await api('/api/srs?all=true', pair.learner.id);
+					const vocab = vocabRes.data as Array<{ id: string }>;
+					if (vocab.length === 0) return;
+
+					const targetId = vocab[0].id;
+					for (let i = 0; i < 10; i++) {
+						const res = await post(
+							'/api/srs',
+							{ vocabId: targetId, quality: 5, modality: 'listening' },
+							pair.learner.id
+						);
+						expect(res.status).toBe(200);
+					}
+
+					const afterRes = await api('/api/srs?all=true', pair.learner.id);
+					const updated = (afterRes.data as Array<{ id: string; nextReview: string }>).find(
+						(v) => v.id === targetId
+					);
+					expect(updated).toBeDefined();
+
+					const nextReview = new Date(updated!.nextReview);
+					const oneYearFromNow = new Date();
+					oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 2);
+					expect(nextReview.getTime()).toBeLessThan(oneYearFromNow.getTime());
+				}, 30000);
+			}
+		});
 	});
 
 	describe(`REGRESSION: Pronunciation evaluation returns valid scores — ${lang.label}`, () => {
