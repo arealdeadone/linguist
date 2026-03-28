@@ -52,7 +52,13 @@ export async function getAllCostPeriods() {
 		.groupBy(sql`date_trunc('day', ${aiUsageLogs.createdAt})`, aiUsageLogs.task)
 		.orderBy(desc(sql`date_trunc('day', ${aiUsageLogs.createdAt})`));
 
-	type PeriodEntry = { period: string; costUsd: number; inputTokens: number; outputTokens: number; callCount: number };
+	type PeriodEntry = {
+		period: string;
+		costUsd: number;
+		inputTokens: number;
+		outputTokens: number;
+		callCount: number;
+	};
 	type TaskEntry = { task: string; costUsd: number; callCount: number; avgTokens: number };
 
 	const dailyMap = new Map<string, PeriodEntry>();
@@ -68,7 +74,11 @@ export async function getAllCostPeriods() {
 		const weekKey = weekStart.toISOString().slice(0, 10);
 		const monthKey = dayKey.slice(0, 7) + '-01';
 
-		for (const [map, key] of [[dailyMap, dayKey], [weeklyMap, weekKey], [monthlyMap, monthKey]] as const) {
+		for (const [map, key] of [
+			[dailyMap, dayKey],
+			[weeklyMap, weekKey],
+			[monthlyMap, monthKey]
+		] as const) {
 			const existing = map.get(key);
 			if (existing) {
 				existing.costUsd += row.costUsd;
@@ -100,8 +110,7 @@ export async function getAllCostPeriods() {
 		}
 	}
 
-	const toArray = (m: Map<string, PeriodEntry>, limit: number) =>
-		[...m.values()].slice(0, limit);
+	const toArray = (m: Map<string, PeriodEntry>, limit: number) => [...m.values()].slice(0, limit);
 
 	const taskCosts: TaskEntry[] = [...taskMap.entries()]
 		.map(([task, v]) => ({
@@ -165,17 +174,23 @@ export async function getUsageStats() {
 	const startOfToday = new Date();
 	startOfToday.setUTCHours(0, 0, 0, 0);
 
-	const rows = await db.execute(sql`
-		SELECT
-			count(*)::int as "totalCalls",
-			coalesce(sum(input_tokens), 0)::int as "totalInputTokens",
-			coalesce(sum(output_tokens), 0)::int as "totalOutputTokens",
-			coalesce(sum(cost_usd), 0)::float as "totalCost",
-			coalesce(sum(case when created_at >= ${startOfToday} then cost_usd else 0 end), 0)::float as "costToday"
-		FROM ai_usage_logs
-	`);
+	const [totals] = await db
+		.select({
+			totalCalls: sql<number>`count(*)::int`,
+			totalInputTokens: sql<number>`coalesce(sum(${aiUsageLogs.inputTokens}), 0)::int`,
+			totalOutputTokens: sql<number>`coalesce(sum(${aiUsageLogs.outputTokens}), 0)::int`,
+			totalCost: sql<number>`coalesce(sum(${aiUsageLogs.costUsd}), 0)::float`
+		})
+		.from(aiUsageLogs);
 
-	const r = rows[0] as Record<string, unknown>;
+	const [todayRow] = await db
+		.select({
+			costToday: sql<number>`coalesce(sum(${aiUsageLogs.costUsd}), 0)::float`
+		})
+		.from(aiUsageLogs)
+		.where(gte(aiUsageLogs.createdAt, startOfToday));
+
+	const r = { ...totals, costToday: todayRow.costToday };
 
 	return {
 		totalCalls: Number(r.totalCalls),

@@ -4,7 +4,8 @@ import { getLearnerById } from '$lib/server/data/learners';
 import { getVocabByLearnerId } from '$lib/server/data/vocabulary';
 import { error } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load: PageServerLoad = async ({ params, parent, depends }) => {
+	depends('data:learner');
 	const { learnerId } = await parent();
 	const lesson = await getLessonById(params.id);
 	if (!lesson) error(404, 'Lesson not found');

@@ -51,12 +51,18 @@
 			]);
 
 			if (!srsRes.ok) {
-				const err = await srsRes.json().catch(() => ({}));
+				const err = await srsRes.json().catch((e: unknown) => {
+					console.error('Failed to parse SRS error response:', e);
+					return {};
+				});
 				throw new Error((err as { error?: string }).error ?? 'Failed to load SRS stats');
 			}
 
 			if (!lessonsRes.ok) {
-				const err = await lessonsRes.json().catch(() => ({}));
+				const err = await lessonsRes.json().catch((e: unknown) => {
+					console.error('Failed to parse lessons error response:', e);
+					return {};
+				});
 				throw new Error((err as { error?: string }).error ?? 'Failed to load lessons');
 			}
 

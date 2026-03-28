@@ -42,7 +42,7 @@
 		ctx
 			.resume()
 			.then(() => ctx.close())
-			.catch(() => {});
+			.catch((e) => console.error('AudioContext unlock failed:', e));
 		audioUnlocked = true;
 	}
 

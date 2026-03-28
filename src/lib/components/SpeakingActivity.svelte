@@ -76,7 +76,10 @@
 			});
 
 			if (!sttResponse.ok) {
-				const errData = await sttResponse.json().catch(() => ({}));
+				const errData = await sttResponse.json().catch((e: unknown) => {
+					console.error('Failed to parse STT error response:', e);
+					return {};
+				});
 				const errMsg = (errData as { error?: string }).error;
 				isSystemError = true;
 				throw new Error(
@@ -106,7 +109,10 @@
 			});
 
 			if (!evaluationResponse.ok) {
-				const errData = await evaluationResponse.json().catch(() => ({}));
+				const errData = await evaluationResponse.json().catch((e: unknown) => {
+					console.error('Failed to parse evaluation error response:', e);
+					return {};
+				});
 				const errMsg = (errData as { error?: string }).error;
 				isSystemError = true;
 				throw new Error(
