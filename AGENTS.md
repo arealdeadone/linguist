@@ -123,6 +123,9 @@ grep -rn "catch {}\|catch()\|\.catch(() => {})\|\.catch(() => \[\])" src/ --incl
 10. **Every new vocab from lessons must be persisted** — `upsertVocab()` on lesson generation AND completion
 11. **Every modification to `db.ts` must preserve lazy Proxy pattern** — verify `connect_timeout`, `prepare`, `ssl`, `max` settings survive the change
 12. **Every new external service client must be lazy-initialized** — no module-scope `new Client()` or `createClient()` calls that run on import
+13. **Every new feature or improvement must have unit + integration tests** — no feature ships without tests. Unit tests for pure logic, integration tests for API/DB behavior
+14. **Every bug fix must have a regression test** — add to `regression.integration.test.ts` proving the bug is fixed. The regression test must fail without the fix and pass with it
+15. **Regression tests must be cleaned up** — when a feature is removed from the app, delete its associated regression tests. Stale tests that test removed functionality are bugs themselves
 
 ## COMMANDS
 
