@@ -258,26 +258,22 @@ export async function transcribe(
 ): Promise<TranscriptionResult> {
 	const client = getClient();
 
-	let file: File;
-	if (audio instanceof File) {
-		file = audio;
-	} else {
-		const { filetypeinfo } = await import('magic-bytes.js');
-		const bytes = new Uint8Array(audio);
-		const detected = filetypeinfo(bytes);
-		const audioType = detected.find(
-			(d: { mime?: string }) => d.mime?.startsWith('audio/') || d.mime?.startsWith('video/')
-		);
-		let ext = audioType?.extension ?? 'webm';
-		let mime = audioType?.mime ?? 'audio/webm';
+	const bytes = new Uint8Array(audio instanceof File ? await audio.arrayBuffer() : audio);
 
-		if (ext === 'mkv' || mime === 'video/x-matroska') {
-			ext = 'webm';
-			mime = 'audio/webm';
-		}
+	const { filetypeinfo } = await import('magic-bytes.js');
+	const detected = filetypeinfo(bytes);
+	const audioType = detected.find(
+		(d: { mime?: string }) => d.mime?.startsWith('audio/') || d.mime?.startsWith('video/')
+	);
+	let ext = audioType?.extension ?? 'webm';
+	let mime = audioType?.mime ?? 'audio/webm';
 
-		file = new File([bytes], `audio.${ext}`, { type: mime });
+	if (ext === 'mkv' || mime === 'video/x-matroska') {
+		ext = 'webm';
+		mime = 'audio/webm';
 	}
+
+	const file = new File([bytes], `audio.${ext}`, { type: mime });
 
 	const response = await client.audio.transcriptions.create({
 		model: STT_MODEL,
