@@ -27,7 +27,8 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 			word: v.word,
 			meaning: v.meaning,
 			romanization: v.romanization,
-			sceneDescription: v.sceneDescription
+			sceneDescription: v.sceneDescription,
+			audioUrl: v.audioUrl
 		}))
 	};
 };

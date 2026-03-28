@@ -564,3 +564,23 @@ describe('REGRESSION: Conversation JSON response works end-to-end', () => {
 		}, 30000);
 	}
 });
+
+describe('REGRESSION: Lesson page allVocab includes audioUrl', () => {
+	for (const lang of langConfigs) {
+		it(`GIVEN ${lang.label} vocab with audioUrl THEN /api/srs?all=true returns audioUrl field`, async () => {
+			const pair = pairs[lang.key];
+			if (!pair) return;
+
+			const res = await api('/api/srs?all=true', pair.learner.id);
+			const vocab = res.data as Array<{ id: string; word: string; audioUrl: string | null }>;
+			expect(vocab.length).toBeGreaterThan(0);
+
+			const withAudio = vocab.filter((v) => v.audioUrl !== null && v.audioUrl !== undefined);
+			expect(withAudio.length).toBeGreaterThan(0);
+			for (const v of withAudio) {
+				expect(typeof v.audioUrl).toBe('string');
+				expect(v.audioUrl!.length).toBeGreaterThan(0);
+			}
+		}, 30000);
+	}
+});

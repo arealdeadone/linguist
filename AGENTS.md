@@ -225,7 +225,7 @@ npm run test -- --run     # Local — requires Docker for PostgreSQL + Redis
 
 ### Test Counts
 
-Test files: `srs.test.ts` (26), `cost-tracker.test.ts` (8), `schema-drift.test.ts` (3), `language-tester.test.ts` (7), `api.integration.test.ts` (28), `bdd.integration.test.ts` (45), `regression.integration.test.ts` (40) = **157 total**
+Test files: `srs.test.ts` (26), `cost-tracker.test.ts` (8), `schema-drift.test.ts` (3), `language-tester.test.ts` (7), `api.integration.test.ts` (28), `bdd.integration.test.ts` (45), `regression.integration.test.ts` (42) = **159 total**
 
 ## SELF-UPDATE RULE
 
