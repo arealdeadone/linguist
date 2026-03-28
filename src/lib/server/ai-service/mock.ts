@@ -297,6 +297,7 @@ export class MockAIService implements AIService {
 					: [
 							{ type: 'listening', duration_min: 5 },
 							{ type: 'vocabulary_tpr', duration_min: 7 },
+							{ type: 'speaking', duration_min: 5 },
 							{ type: 'conversation', duration_min: 8 },
 							{ type: 'quiz', duration_min: 5 }
 						],

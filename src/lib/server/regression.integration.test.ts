@@ -584,3 +584,66 @@ describe('REGRESSION: Lesson page allVocab includes audioUrl', () => {
 		}, 30000);
 	}
 });
+
+describe('REGRESSION: Lesson plan has speaking activity with multiple vocab words', () => {
+	for (const lang of langConfigs) {
+		it(`GIVEN ${lang.label} lesson THEN plan has speaking activity and multiple vocab_targets`, async () => {
+			const pair = pairs[lang.key];
+			if (!pair) return;
+
+			const { status, data } = await post(
+				'/api/lessons',
+				{
+					week: 95,
+					day: 1,
+					theme: 'speaking regression test'
+				},
+				pair.learner.id
+			);
+			expect(status).toBe(201);
+
+			const plan = (data as { plan: Record<string, unknown> }).plan;
+			const activities = plan.activities as Array<{ type: string }>;
+			expect(Array.isArray(activities)).toBe(true);
+
+			const speakingActivity = activities.find((a) => a.type === 'speaking');
+			expect(speakingActivity).toBeDefined();
+
+			const vocabTargets = plan.vocabulary_targets as Array<{ word: string }>;
+			expect(vocabTargets.length).toBeGreaterThan(1);
+		}, 120000);
+	}
+});
+
+describe('REGRESSION: Quiz questions can reference vocab with audioUrl', () => {
+	for (const lang of langConfigs) {
+		it(`GIVEN ${lang.label} lesson with quiz THEN vocab audioUrls exist for quiz words`, async () => {
+			const pair = pairs[lang.key];
+			if (!pair) return;
+
+			const { status, data } = await post(
+				'/api/lessons',
+				{
+					week: 94,
+					day: 1,
+					theme: 'quiz audio regression test'
+				},
+				pair.learner.id
+			);
+			expect(status).toBe(201);
+
+			const plan = (data as { plan: Record<string, unknown> }).plan;
+			const vocabTargets = plan.vocabulary_targets as Array<{ word: string; audioUrl?: string }>;
+			expect(vocabTargets.length).toBeGreaterThan(0);
+
+			const vocabRes = await api('/api/srs?all=true', pair.learner.id);
+			const allVocab = vocabRes.data as Array<{ word: string; audioUrl: string | null }>;
+
+			for (const target of vocabTargets) {
+				const dbVocab = allVocab.find((v) => v.word === target.word);
+				expect(dbVocab).toBeDefined();
+				expect(dbVocab!.audioUrl).toBeTruthy();
+			}
+		}, 120000);
+	}
+});
