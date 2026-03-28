@@ -98,12 +98,12 @@ export async function playTTS(text: string, preGeneratedUrl?: string): Promise<v
 
 		audio.onerror = () => {
 			isPlaying = false;
-			showToast('Text-to-speech playback failed.', 'error');
 		};
 
 		await audio.play();
-	} catch {
+	} catch (e) {
 		isPlaying = false;
+		if (e instanceof DOMException && e.name === 'NotAllowedError') return;
 		showToast('Audio playback failed', 'error');
 	}
 }

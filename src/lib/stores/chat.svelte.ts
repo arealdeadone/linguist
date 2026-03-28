@@ -96,10 +96,13 @@ export async function sendAudioMessage(
 	scenario?: string
 ): Promise<void> {
 	error = null;
+	isStreaming = true;
 
 	try {
 		const formData = new FormData();
-		formData.append('audio', blob, 'recording.webm');
+		const mime = blob.type && blob.type.length > 0 ? blob.type : 'audio/webm';
+		const ext = mime.includes('wav') ? 'wav' : mime.includes('mp4') ? 'mp4' : 'webm';
+		formData.append('audio', new File([blob], `recording.${ext}`, { type: mime }));
 		formData.append('language', language);
 
 		const res = await fetch('/api/speech/stt', {
@@ -116,9 +119,11 @@ export async function sendAudioMessage(
 			throw new Error('No speech detected');
 		}
 
+		isStreaming = false;
 		await sendMessage(result.text, learnerId, scenario);
 	} catch (err) {
 		error = err instanceof Error ? err.message : 'Audio processing failed';
+		isStreaming = false;
 	}
 }
 

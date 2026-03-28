@@ -32,8 +32,19 @@
 	let isEnding = $state(false);
 	let playingMessageIndex = $state<number | null>(null);
 	let lastAutoPlayedIndex = $state(-1);
+	let audioUnlocked = $state(false);
 
 	const canSend = $derived(inputText.trim().length > 0 && !chat.isStreaming);
+
+	function unlockAudio(): void {
+		if (audioUnlocked) return;
+		const ctx = new AudioContext();
+		ctx
+			.resume()
+			.then(() => ctx.close())
+			.catch(() => {});
+		audioUnlocked = true;
+	}
 
 	async function scrollToBottom(): Promise<void> {
 		await tick();
@@ -63,6 +74,7 @@
 	async function handleSend(): Promise<void> {
 		const text = inputText.trim();
 		if (!text || chat.isStreaming) return;
+		unlockAudio();
 		inputText = '';
 		await sendMessage(text, learnerId, scenario);
 	}
@@ -76,6 +88,7 @@
 
 	async function handleRecordingComplete(blob: Blob): Promise<void> {
 		showRecorder = false;
+		unlockAudio();
 		await sendAudioMessage(blob, learnerId, targetLanguage, scenario);
 	}
 
@@ -267,28 +280,28 @@
 					</div>
 				{/each}
 
-			{#if chat.isStreaming}
-				<div class="flex justify-start" in:fade={{ duration: 150 }}>
-					<div
-						class="rounded-2xl rounded-bl-md border border-surface-100 bg-white px-5 py-4 shadow-sm"
-					>
-						<div class="flex items-center gap-1.5">
-							<span
-								class="h-2 w-2 animate-bounce rounded-full bg-surface-300"
-								style="animation-delay: 0ms"
-							></span>
-							<span
-								class="h-2 w-2 animate-bounce rounded-full bg-surface-300"
-								style="animation-delay: 150ms"
-							></span>
-							<span
-								class="h-2 w-2 animate-bounce rounded-full bg-surface-300"
-								style="animation-delay: 300ms"
-							></span>
+				{#if chat.isStreaming}
+					<div class="flex justify-start" in:fade={{ duration: 150 }}>
+						<div
+							class="rounded-2xl rounded-bl-md border border-surface-100 bg-white px-5 py-4 shadow-sm"
+						>
+							<div class="flex items-center gap-1.5">
+								<span
+									class="h-2 w-2 animate-bounce rounded-full bg-surface-300"
+									style="animation-delay: 0ms"
+								></span>
+								<span
+									class="h-2 w-2 animate-bounce rounded-full bg-surface-300"
+									style="animation-delay: 150ms"
+								></span>
+								<span
+									class="h-2 w-2 animate-bounce rounded-full bg-surface-300"
+									style="animation-delay: 300ms"
+								></span>
+							</div>
 						</div>
 					</div>
-				</div>
-			{/if}
+				{/if}
 			</div>
 		{/if}
 	</div>
