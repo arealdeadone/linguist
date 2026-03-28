@@ -36,12 +36,14 @@
 		romanization,
 		language,
 		lessonLanguage,
+		audioUrl,
 		onComplete
 	}: {
 		targetPhrase: string;
 		romanization?: string;
 		language: string;
 		lessonLanguage: string;
+		audioUrl?: string;
 		onComplete: (result?: { score: number; correct: boolean }) => void;
 	} = $props();
 
@@ -157,7 +159,7 @@
 			<p class="text-base text-primary-600">{romanization}</p>
 		{/if}
 		<div class="flex justify-center pt-1">
-			<AudioPlayer text={targetPhrase} {language} size="lg" />
+			<AudioPlayer text={targetPhrase} {language} {audioUrl} size="lg" />
 		</div>
 	</div>
 

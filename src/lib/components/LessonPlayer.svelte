@@ -737,6 +737,9 @@
 										romanization={currentSpeakingVocab.romanization}
 										language={targetLanguage}
 										{lessonLanguage}
+										audioUrl={currentSpeakingVocab.audioUrl ??
+											vocabLookup.get(currentSpeakingVocab.word)?.audioUrl ??
+											undefined}
 										onComplete={handleSpeakingComplete}
 									/>
 								</div>
