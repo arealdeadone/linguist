@@ -19,6 +19,7 @@
 		meaning: string | null;
 		romanization: string | null;
 		sceneDescription: string | null;
+		audioUrl: string | null;
 	}>;
 	const initialStep = parseInt($page.url.searchParams.get('step') ?? '0') || 0;
 

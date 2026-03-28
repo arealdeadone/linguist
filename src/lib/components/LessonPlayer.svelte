@@ -55,9 +55,10 @@
 		initialStep?: number;
 	} = $props();
 
+	const activities = $derived(Array.isArray(plan.activities) ? plan.activities : []);
 	let currentIndex = $state(initialStep);
-	let totalActivities = $derived(plan.activities.length);
-	let currentActivity = $derived(plan.activities[currentIndex]);
+	let totalActivities = $derived(activities.length);
+	let currentActivity = $derived(activities[currentIndex]);
 	let cefrLevel = $derived(plan.cefr_level);
 	let progress = $derived((currentIndex + 1) / totalActivities);
 	let isComplete = $state(false);
