@@ -103,10 +103,8 @@
 			};
 		})
 	);
-	const nextDisabled = $derived(
-		(currentActivity?.type === 'conversation' && showConversation) ||
-			(currentActivity?.type === 'speaking' && !speakingComplete)
-	);
+	const nextDisabled = $derived(currentActivity?.type === 'conversation' && showConversation);
+	const showSkip = $derived(currentActivity?.type === 'speaking' && !speakingComplete);
 
 	$effect(() => {
 		currentIndex;
@@ -270,7 +268,6 @@
 		});
 		await markLessonComplete();
 	}
-
 </script>
 
 <div class="mx-auto flex min-h-[calc(100vh-10rem)] max-w-2xl flex-col py-4">
@@ -497,10 +494,10 @@
 							{#if plan.vocabulary_targets.length > 0}
 								<div class="mt-5 space-y-3">
 									{#each plan.vocabulary_targets as vocab}
-											{@const v =
-												typeof vocab === 'string'
-													? { word: vocab, romanization: '', meaning: '', audioUrl: undefined }
-													: vocab}
+										{@const v =
+											typeof vocab === 'string'
+												? { word: vocab, romanization: '', meaning: '', audioUrl: undefined }
+												: vocab}
 										<div class="flex items-center gap-3 rounded-xl bg-surface-50 px-4 py-3">
 											<AudioPlayer
 												text={v.word}
@@ -772,6 +769,15 @@
 				Previous
 			</button>
 			<div class="flex-1"></div>
+			{#if showSkip}
+				<button
+					onclick={goNext}
+					class="flex items-center gap-1.5 rounded-xl border border-surface-200 px-4 py-3 text-sm font-medium text-surface-400 transition-all
+						hover:text-surface-600 hover:bg-surface-50 active:scale-[0.98]"
+				>
+					Skip Activity
+				</button>
+			{/if}
 			<button
 				onclick={goNext}
 				disabled={nextDisabled}

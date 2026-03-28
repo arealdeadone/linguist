@@ -42,7 +42,7 @@
 		romanization?: string;
 		language: string;
 		lessonLanguage: string;
-		onComplete: (result: { score: number; correct: boolean }) => void;
+		onComplete: (result?: { score: number; correct: boolean }) => void;
 	} = $props();
 
 	let transcript = $state('');
@@ -139,6 +139,10 @@
 		if (!evaluation) return;
 		onComplete({ score: evaluation.score, correct: evaluation.correct });
 	}
+
+	function skip(): void {
+		onComplete();
+	}
 </script>
 
 <div class="space-y-5 rounded-2xl border border-surface-200 bg-white p-4 shadow-sm sm:p-6">
@@ -199,6 +203,12 @@
 					: 'text-surface-700 border border-surface-200'}"
 			>
 				Try Again
+			</button>
+			<button
+				onclick={skip}
+				class="mt-2 w-full rounded-lg px-3 py-2 text-sm font-medium text-surface-400 transition hover:text-surface-600"
+			>
+				Skip Word
 			</button>
 		</div>
 	{/if}
