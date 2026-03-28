@@ -60,7 +60,11 @@
 		try {
 			const formData = new FormData();
 			const mime = blob.type && blob.type.length > 0 ? blob.type : 'audio/webm';
-			const ext = mime.includes('mp4') || mime.includes('m4a') ? 'mp4' : 'webm';
+			const ext = mime.includes('wav')
+				? 'wav'
+				: mime.includes('mp4') || mime.includes('m4a')
+					? 'mp4'
+					: 'webm';
 			formData.append('audio', new File([blob], `recording.${ext}`, { type: mime }));
 			formData.append('language', language);
 

@@ -6,7 +6,7 @@
 		maxDurationMs = 30000
 	}: { onRecordingComplete: (blob: Blob) => void; maxDurationMs?: number } = $props();
 
-	let status = $state<'idle' | 'requesting' | 'recording' | 'done'>('idle');
+	let status = $state<'idle' | 'requesting' | 'recording' | 'converting' | 'done'>('idle');
 	let elapsed = $state(0);
 	let error = $state<string | null>(null);
 	let timerInterval: ReturnType<typeof setInterval> | null = null;
@@ -44,6 +44,48 @@
 			.padStart(2, '0');
 		const seconds = (totalSeconds % 60).toString().padStart(2, '0');
 		return `${minutes}:${seconds}`;
+	}
+
+	async function convertToWav(blob: Blob): Promise<Blob> {
+		const arrayBuffer = await blob.arrayBuffer();
+		const audioContext = new AudioContext();
+		try {
+			const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+			const numChannels = 1;
+			const sampleRate = audioBuffer.sampleRate;
+			const samples = audioBuffer.getChannelData(0);
+			const bytesPerSample = 2;
+			const dataLength = samples.length * bytesPerSample;
+			const buffer = new ArrayBuffer(44 + dataLength);
+			const view = new DataView(buffer);
+
+			const writeString = (offset: number, str: string) => {
+				for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+			};
+
+			writeString(0, 'RIFF');
+			view.setUint32(4, 36 + dataLength, true);
+			writeString(8, 'WAVE');
+			writeString(12, 'fmt ');
+			view.setUint32(16, 16, true);
+			view.setUint16(20, 1, true);
+			view.setUint16(22, numChannels, true);
+			view.setUint32(24, sampleRate, true);
+			view.setUint32(28, sampleRate * numChannels * bytesPerSample, true);
+			view.setUint16(32, numChannels * bytesPerSample, true);
+			view.setUint16(34, bytesPerSample * 8, true);
+			writeString(36, 'data');
+			view.setUint32(40, dataLength, true);
+
+			for (let i = 0; i < samples.length; i++) {
+				const clamped = Math.max(-1, Math.min(1, samples[i]));
+				view.setInt16(44 + i * 2, clamped * 0x7fff, true);
+			}
+
+			return new Blob([buffer], { type: 'audio/wav' });
+		} finally {
+			await audioContext.close();
+		}
 	}
 
 	async function start(): Promise<void> {
@@ -88,26 +130,34 @@
 				stopTracks();
 
 				const mimeType = mediaRecorder?.mimeType || 'audio/webm';
-				const blob = new Blob(chunks, { type: mimeType });
+				const rawBlob = new Blob(chunks, { type: mimeType });
 				chunks = [];
 				mediaRecorder = null;
 
-				if (blob.size > 0) {
-					onRecordingComplete(blob);
-					status = 'done';
-				} else {
+				if (rawBlob.size === 0) {
 					error = 'No audio was captured. Please try again.';
 					status = 'idle';
+					elapsed = 0;
+					return;
 				}
 
-				elapsed = 0;
-
-				clearResetTimeout();
-				if (status === 'done') {
-					resetTimeout = setTimeout(() => {
-						status = 'idle';
-					}, 900);
-				}
+				status = 'converting';
+				convertToWav(rawBlob)
+					.then((wavBlob) => {
+						onRecordingComplete(wavBlob);
+						status = 'done';
+					})
+					.catch(() => {
+						onRecordingComplete(rawBlob);
+						status = 'done';
+					})
+					.finally(() => {
+						elapsed = 0;
+						clearResetTimeout();
+						resetTimeout = setTimeout(() => {
+							status = 'idle';
+						}, 900);
+					});
 			};
 
 			mediaRecorder.start();
@@ -154,17 +204,21 @@
 <div class="flex flex-col items-center gap-3">
 	<button
 		onclick={status === 'recording' ? stop : start}
-		disabled={status === 'requesting' || status === 'done'}
+		disabled={status === 'requesting' || status === 'converting' || status === 'done'}
 		class="relative flex min-h-16 min-w-16 items-center justify-center rounded-full transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70
 			{status === 'recording'
-				? 'bg-error text-white shadow-xl shadow-error/30 animate-pulse'
-				: 'bg-error/10 text-error hover:bg-error/15'}"
+			? 'bg-error text-white shadow-xl shadow-error/30 animate-pulse'
+			: 'bg-error/10 text-error hover:bg-error/15'}"
 		aria-label={status === 'recording' ? 'Stop recording' : 'Start recording'}
 	>
-		{#if status === 'requesting'}
+		{#if status === 'requesting' || status === 'converting'}
 			<svg class="h-7 w-7 animate-spin" viewBox="0 0 24 24" fill="none">
 				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" />
-				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+				<path
+					class="opacity-75"
+					fill="currentColor"
+					d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+				/>
 			</svg>
 		{:else if status === 'recording'}
 			<div class="h-4 w-4 rounded-full bg-white"></div>
@@ -200,6 +254,8 @@
 
 	{#if status === 'recording'}
 		<p class="text-sm font-medium text-error">{formatElapsed(elapsed)}</p>
+	{:else if status === 'converting'}
+		<p class="text-sm font-medium text-primary-600">Processing...</p>
 	{:else if status === 'done'}
 		<p class="text-sm font-medium text-success">Recording complete</p>
 	{/if}
