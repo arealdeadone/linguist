@@ -86,11 +86,15 @@ for (const lang of langConfigs) {
 			const beforeCards = await api('/api/srs?all=true', pair.learner.id);
 			const beforeCount = (beforeCards.data as unknown[]).length;
 
-			const { status, data } = await post('/api/lessons', {
-				week: 99,
-				day: 1,
-				theme: 'regression test'
-			}, pair.learner.id);
+			const { status, data } = await post(
+				'/api/lessons',
+				{
+					week: 99,
+					day: 1,
+					theme: 'regression test'
+				},
+				pair.learner.id
+			);
 			expect(status).toBe(201);
 
 			const plan = (data as { plan: Record<string, unknown> }).plan;
@@ -190,12 +194,16 @@ for (const lang of langConfigs) {
 			const word = lang.key === 'zh' ? '你好' : 'నమస్కారం';
 
 			for (let i = 0; i < 3; i++) {
-				const { data } = await post('/api/speech/evaluate', {
-					transcript: word,
-					expected: word,
-					language: pair.learner.targetLanguage,
-					lessonLanguage: pair.learner.lessonLanguage
-				}, pair.learner.id);
+				const { data } = await post(
+					'/api/speech/evaluate',
+					{
+						transcript: word,
+						expected: word,
+						language: pair.learner.targetLanguage,
+						lessonLanguage: pair.learner.lessonLanguage
+					},
+					pair.learner.id
+				);
 				const result = data as { score: number; feedback: string; systemError?: boolean };
 				expect(result.systemError).toBeFalsy();
 				expect(result.score).toBeGreaterThanOrEqual(85);
@@ -226,11 +234,15 @@ for (const lang of langConfigs) {
 			const pair = pairs[lang.key];
 			if (!pair?.lessonId) return;
 
-			const { status, data } = await post('/api/quiz', {
-				lessonId: pair.lessonId,
-				quizType: 'multiple_choice',
-				cefrLevel: 'A1'
-			}, pair.learner.id);
+			const { status, data } = await post(
+				'/api/quiz',
+				{
+					lessonId: pair.lessonId,
+					quizType: 'multiple_choice',
+					cefrLevel: 'A1'
+				},
+				pair.learner.id
+			);
 			expect(status).toBe(201);
 			const questions = (data as { questions: Array<Record<string, unknown>> }).questions;
 			expect(questions.length).toBeGreaterThan(0);
@@ -248,7 +260,11 @@ describe('REGRESSION: Lesson completion marks status correctly', () => {
 		it(`GIVEN ${lang.label} lesson WHEN PATCH completed THEN completedAt is set`, async () => {
 			const pair = pairs[lang.key];
 			if (!pair?.lessonId) return;
-			const { data } = await patch(`/api/lessons/${pair.lessonId}`, { status: 'completed' }, pair.learner.id);
+			const { data } = await patch(
+				`/api/lessons/${pair.lessonId}`,
+				{ status: 'completed' },
+				pair.learner.id
+			);
 			const lesson = data as { status: string; completedAt: string | null };
 			expect(lesson.status).toBe('completed');
 			expect(lesson.completedAt).toBeTruthy();
@@ -286,12 +302,16 @@ describe('REGRESSION: chatJSON works reliably with Claude', () => {
 		if (!zhLearner) return;
 		const results: number[] = [];
 		for (let i = 0; i < 3; i++) {
-			const { data } = await post('/api/speech/evaluate', {
-				transcript: '你好',
-				expected: '你好',
-				language: 'zh',
-				lessonLanguage: 'hi'
-			}, zhLearner.id);
+			const { data } = await post(
+				'/api/speech/evaluate',
+				{
+					transcript: '你好',
+					expected: '你好',
+					language: 'zh',
+					lessonLanguage: 'hi'
+				},
+				zhLearner.id
+			);
 			const score = (data as { score: number }).score;
 			results.push(score);
 		}
@@ -318,7 +338,11 @@ describe('REGRESSION: Error responses are never empty', () => {
 	it('GIVEN missing fields on evaluate THEN error message lists required fields', async () => {
 		const zhLearner = pairs.zh?.learner;
 		if (!zhLearner) return;
-		const { status, data } = await post('/api/speech/evaluate', { transcript: 'test' }, zhLearner.id);
+		const { status, data } = await post(
+			'/api/speech/evaluate',
+			{ transcript: 'test' },
+			zhLearner.id
+		);
 		expect(status).toBe(400);
 		expect((data as { error: string }).error).toBeTruthy();
 	});
@@ -331,6 +355,82 @@ describe('REGRESSION: Error responses are never empty', () => {
 		expect(status).toBe(404);
 		expect((data as { error: string }).error).toBeTruthy();
 	});
+});
+
+describe('REGRESSION: Lesson generation pre-generates TTS audio URLs', () => {
+	for (const lang of langConfigs) {
+		it(`GIVEN ${lang.label} lesson THEN vocab has audioUrl populated`, async () => {
+			const pair = pairs[lang.key];
+			if (!pair) return;
+
+			const { status, data } = await post(
+				'/api/lessons',
+				{
+					week: 98,
+					day: 1,
+					theme: 'tts audio test'
+				},
+				pair.learner.id
+			);
+			expect(status).toBe(201);
+
+			const plan = (data as { plan: Record<string, unknown> }).plan;
+			const vocabTargets = plan.vocabulary_targets as Array<{ word: string; audioUrl?: string }>;
+			expect(vocabTargets.length).toBeGreaterThan(0);
+
+			const withAudio = vocabTargets.filter(
+				(v) => typeof v.audioUrl === 'string' && v.audioUrl.length > 0
+			);
+			expect(withAudio.length).toBe(vocabTargets.length);
+
+			const allVocab = await api('/api/srs?all=true', pair.learner.id);
+			const vocabList = allVocab.data as Array<{ word: string; audioUrl: string | null }>;
+			for (const target of vocabTargets) {
+				const found = vocabList.find((v) => v.word === target.word);
+				expect(found).toBeDefined();
+				expect(found!.audioUrl).toBeTruthy();
+			}
+		}, 120000);
+	}
+});
+
+describe('REGRESSION: Lesson generation pre-generates quiz', () => {
+	for (const lang of langConfigs) {
+		it(`GIVEN ${lang.label} lesson THEN preGeneratedQuiz exists in plan`, async () => {
+			const pair = pairs[lang.key];
+			if (!pair) return;
+
+			const { status, data } = await post(
+				'/api/lessons',
+				{
+					week: 97,
+					day: 1,
+					theme: 'quiz pregen test'
+				},
+				pair.learner.id
+			);
+			expect(status).toBe(201);
+
+			const plan = (data as { plan: Record<string, unknown> }).plan;
+			const quiz = plan.preGeneratedQuiz as
+				| { quizType: string; words: string[]; questions: unknown[] }
+				| undefined;
+
+			expect(quiz).toBeDefined();
+			expect(typeof quiz!.quizType).toBe('string');
+			expect(Array.isArray(quiz!.words)).toBe(true);
+			expect(quiz!.words.length).toBeGreaterThan(0);
+			expect(Array.isArray(quiz!.questions)).toBe(true);
+			expect(quiz!.questions.length).toBeGreaterThan(0);
+
+			const lessonId = (data as { id: string }).id;
+			const lesson = await api(`/api/lessons/${lessonId}`, pair.learner.id);
+			const storedPlan = (lesson.data as { plan: Record<string, unknown> }).plan;
+			const storedQuiz = storedPlan.preGeneratedQuiz as { questions: unknown[] } | undefined;
+			expect(storedQuiz).toBeDefined();
+			expect(storedQuiz!.questions.length).toBeGreaterThan(0);
+		}, 120000);
+	}
 });
 
 describe('REGRESSION: Conversation JSON response works end-to-end', () => {

@@ -60,7 +60,8 @@
 		try {
 			const formData = new FormData();
 			const mime = blob.type && blob.type.length > 0 ? blob.type : 'audio/webm';
-			formData.append('audio', new File([blob], 'recording.webm', { type: mime }));
+			const ext = mime.includes('mp4') || mime.includes('m4a') ? 'mp4' : 'webm';
+			formData.append('audio', new File([blob], `recording.${ext}`, { type: mime }));
 			formData.append('language', language);
 
 			const sttResponse = await fetch('/api/speech/stt', {

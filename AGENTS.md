@@ -201,7 +201,26 @@ Every new feature requires:
 3. BDD behavioral test in `bdd.integration.test.ts` — must cover BOTH language pairs (zh/hi + te/th)
 4. Regression test in `regression.integration.test.ts` for any bug fix
 
-Test files: `srs.test.ts` (24), `cost-tracker.test.ts` (8), `schema-drift.test.ts` (3), `api.integration.test.ts` (28), `bdd.integration.test.ts` (45), `regression.integration.test.ts` (29) = **134 total**
+### Running Tests
+
+```bash
+npm run test:docker       # Recommended — runs everything in Docker (any OS)
+npm run test -- --run     # Local — requires Docker for PostgreSQL + Redis
+```
+
+**`test:docker` (recommended)**: Builds a test container, spins up PostgreSQL + Redis, resets DB, seeds, runs dev server with mocked AI, executes all tests, tears down. Works identically on macOS, Linux, and Windows. Only requires Docker.
+
+**`test` (local)**: Uses `scripts/test-env.sh` via vitest globalSetup to manage the same lifecycle on the host. Requires Docker for PostgreSQL/Redis, and bash.
+
+### Test Architecture
+
+- **External services (AI, Supabase Auth, Vercel) must be mocked** — integration tests verify service ↔ DB/cache behavior, NOT external API availability
+- **DB + Redis are real** — spun up via Docker, tested against actual PostgreSQL/Redis
+- **Each run is isolated** — clean DB schema + fresh seed data every time
+
+### Test Counts
+
+Test files: `srs.test.ts` (24), `cost-tracker.test.ts` (8), `schema-drift.test.ts` (3), `api.integration.test.ts` (28), `bdd.integration.test.ts` (45), `regression.integration.test.ts` (30) = **138 total**
 
 ## SELF-UPDATE RULE
 

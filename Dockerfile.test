@@ -1,0 +1,17 @@
+FROM node:22-alpine
+
+RUN apk add --no-cache curl bash postgresql-client
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY packages/ai-core/package.json packages/ai-core/
+COPY worker/package.json worker/
+
+RUN npm ci --ignore-scripts
+
+COPY . .
+
+RUN npx svelte-kit sync 2>/dev/null || true
+
+CMD ["bash", "scripts/test-runner.sh"]

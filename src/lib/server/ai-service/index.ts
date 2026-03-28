@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 import type { AIService } from '$lib/types';
 import { LocalAIService } from './local';
+import { MockAIService } from './mock';
 import { QueueAIService } from './queue';
 
 let _instance: AIService | null = null;
@@ -10,6 +11,8 @@ export function getAIService(): AIService {
 		const mode = env.AI_MODE ?? 'local';
 		if (mode === 'queue') {
 			_instance = new QueueAIService();
+		} else if (mode === 'mock') {
+			_instance = new MockAIService();
 		} else {
 			_instance = new LocalAIService();
 		}
@@ -18,5 +21,5 @@ export function getAIService(): AIService {
 	return _instance;
 }
 
-export { LocalAIService, QueueAIService };
+export { LocalAIService, QueueAIService, MockAIService };
 export type { AIService };

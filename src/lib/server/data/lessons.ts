@@ -43,6 +43,11 @@ export async function updateLessonStatus(id: string, status: string) {
 	return rows[0] ?? null;
 }
 
+export async function updateLessonPlan(id: string, plan: Record<string, unknown>) {
+	const rows = await db.update(lessons).set({ plan }).where(eq(lessons.id, id)).returning();
+	return rows[0] ?? null;
+}
+
 export async function getNextPendingLesson(learnerId: string) {
 	const rows = await db
 		.select()

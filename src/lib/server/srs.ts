@@ -17,6 +17,8 @@ export type ReviewQuality = 0 | 1 | 2 | 3 | 4 | 5;
  * 4 - Correct after hesitation
  * 5 - Perfect response
  */
+const MAX_INTERVAL_DAYS = 365;
+
 export function review(card: SM2Card, quality: ReviewQuality): SM2Card {
 	let { repetition, interval, ef } = card;
 
@@ -29,7 +31,7 @@ export function review(card: SM2Card, quality: ReviewQuality): SM2Card {
 		} else if (repetition === 1) {
 			interval = 6;
 		} else {
-			interval = Math.round(interval * ef);
+			interval = Math.min(Math.round(interval * ef), MAX_INTERVAL_DAYS);
 		}
 		repetition += 1;
 	}

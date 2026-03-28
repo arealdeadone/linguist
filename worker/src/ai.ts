@@ -260,7 +260,10 @@ export async function* chatStream(
 	}
 }
 
-export async function transcribe(audio: Buffer | File, language: string): Promise<TranscriptionResult> {
+export async function transcribe(
+	audio: Buffer | File,
+	language: string
+): Promise<TranscriptionResult> {
 	const client = getClient();
 
 	let file: File;
@@ -273,8 +276,13 @@ export async function transcribe(audio: Buffer | File, language: string): Promis
 		const audioType = detected.find(
 			(d: { mime?: string }) => d.mime?.startsWith('audio/') || d.mime?.startsWith('video/')
 		);
-		const ext = audioType?.extension ?? 'webm';
-		const mime = audioType?.mime ?? 'audio/webm';
+		let ext = audioType?.extension ?? 'webm';
+		let mime = audioType?.mime ?? 'audio/webm';
+
+		if (ext === 'mkv' || mime === 'video/x-matroska') {
+			ext = 'webm';
+			mime = 'audio/webm';
+		}
 
 		file = new File([bytes], `audio.${ext}`, { type: mime });
 	}
@@ -291,7 +299,11 @@ export async function transcribe(audio: Buffer | File, language: string): Promis
 	};
 }
 
-export async function synthesize(text: string, instructions?: string, voice?: string): Promise<Buffer> {
+export async function synthesize(
+	text: string,
+	instructions?: string,
+	voice?: string
+): Promise<Buffer> {
 	const client = getClient();
 
 	const response = await client.audio.speech.create({

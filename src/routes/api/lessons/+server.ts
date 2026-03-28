@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getLessonsByLearnerId, createLesson } from '$lib/server/data/lessons';
+import { getLessonsByLearnerId, createLesson, updateLessonPlan } from '$lib/server/data/lessons';
 import { upsertVocab } from '$lib/server/data/vocabulary';
 import { getLearnerById } from '$lib/server/data/learners';
 import { getAIService } from '$lib/server/ai-service';
@@ -34,6 +34,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			theme
 		});
 
+		const lesson = await createLesson({
+			learnerId,
+			cefrLevel: plan.cefr_level,
+			week: plan.week,
+			day: plan.day,
+			theme: plan.theme,
+			plan: plan as unknown as Record<string, unknown>
+		});
+
 		const ttsItems = [
 			...plan.vocabulary_targets.map((vocab) => ({
 				text: vocab.word,
@@ -60,8 +69,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		}
 
 		if (ttsResult.failures.length > 0) {
-			console.error(`TTS pre-generation: ${ttsResult.failures.length} of ${ttsItems.length} failed:`,
-				ttsResult.failures.map(f => `${f.text}: ${f.error}`).join('; '));
+			console.error(
+				`TTS pre-generation: ${ttsResult.failures.length} of ${ttsItems.length} failed:`,
+				ttsResult.failures.map((f) => `${f.text}: ${f.error}`).join('; ')
+			);
 		}
 
 		let quizWarning: string | null = null;
@@ -69,7 +80,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			const quizType = selectQuizTypeByCefr(plan.cefr_level as CefrLevel);
 			const quizResult = await getAIService().generateQuiz({
 				learnerId,
-				lessonId: plan.id,
+				lessonId: lesson.id,
 				quizType,
 				cefrLevel: plan.cefr_level as CefrLevel
 			});
@@ -83,14 +94,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			console.error('Quiz pre-generation failed:', quizWarning);
 		}
 
-		const lesson = await createLesson({
-			learnerId,
-			cefrLevel: plan.cefr_level,
-			week: plan.week,
-			day: plan.day,
-			theme: plan.theme,
-			plan: plan as unknown as Record<string, unknown>
-		});
+		await updateLessonPlan(lesson.id, plan as unknown as Record<string, unknown>);
 
 		for (const vocab of plan.vocabulary_targets) {
 			await upsertVocab({
@@ -112,7 +116,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			warnings.push('Quiz will be generated on-demand');
 		}
 
-		return json({ ...lesson, warnings: warnings.length > 0 ? warnings : undefined }, { status: 201 });
+		return json(
+			{ ...lesson, plan, warnings: warnings.length > 0 ? warnings : undefined },
+			{ status: 201 }
+		);
 	} catch (error) {
 		console.error('Lesson generation failed:', error);
 		const message = error instanceof Error ? error.message : 'Failed to generate lesson';
