@@ -24,9 +24,11 @@
 
 	let {
 		questions,
+		getAudioUrl,
 		onComplete
 	}: {
 		questions: Question[];
+		getAudioUrl?: (word: string) => string | undefined;
 		onComplete: (answers: Array<{ word: string; correct: boolean }>) => void;
 	} = $props();
 
@@ -182,6 +184,7 @@
 											text={currentQuestion.question_audio ??
 												currentQuestion.audio_text ??
 												currentQuestion.word}
+											audioUrl={getAudioUrl?.(currentQuestion.word)}
 											size="lg"
 										/>
 									</div>
@@ -189,7 +192,11 @@
 							</div>
 						{:else if currentQuestion.quiz_modality === 'read_to_meaning'}
 							<div class="flex items-center gap-3">
-								<AudioPlayer text={currentQuestion.audio_text ?? currentQuestion.word} size="md" />
+								<AudioPlayer
+									text={currentQuestion.audio_text ?? currentQuestion.word}
+									audioUrl={getAudioUrl?.(currentQuestion.word)}
+									size="md"
+								/>
 								<div>
 									<p class="text-xl font-semibold text-surface-900">{currentQuestion.word}</p>
 									{#if currentQuestion.romanization}

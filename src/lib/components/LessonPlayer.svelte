@@ -104,7 +104,10 @@
 			};
 		})
 	);
-	const nextDisabled = $derived(currentActivity?.type === 'conversation' && showConversation);
+	const nextDisabled = $derived(
+		(currentActivity?.type === 'conversation' && showConversation) ||
+			(currentActivity?.type === 'speaking' && !speakingComplete)
+	);
 	const showSkip = $derived(currentActivity?.type === 'speaking' && !speakingComplete);
 
 	$effect(() => {
@@ -321,6 +324,7 @@
 		{#if activeQuizType === 'multiple_choice'}
 			<MultipleChoiceQuiz
 				questions={quizData.questions as AdaptiveQuestion[]}
+				getAudioUrl={(word) => vocabLookup.get(word)?.audioUrl ?? undefined}
 				onComplete={handleQuizComplete}
 			/>
 		{:else}
